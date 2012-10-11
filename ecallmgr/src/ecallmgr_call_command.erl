@@ -430,6 +430,8 @@ get_fs_app(Node, UUID, JObj, <<"bridge">>) ->
                           ,fun(DP) ->
                                    [{"application", "set failure_causes=NORMAL_CLEARING,ORIGINATOR_CANCEL,CRASH"}
                                     ,{"application", "set continue_on_fail=true"}
+%% AlanE  add ignore_early_media to provide ring back to caller
+                                 ,{"application", "set ignore_early_media=true"}
                                     |DP
                                    ]
                            end
