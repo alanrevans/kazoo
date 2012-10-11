@@ -144,7 +144,9 @@ find_endpoints(Data, Call) ->
                    ,wh_json:get_value([<<"value">>], Resource, [])
                    ,get_caller_id_type(Resource, Call)}
                   || Resource <- Resources
-                         ,Number <- evaluate_rules(wh_json:get_value(<<"key">>, Resource), ToDID)
+%%                         ,Number <- evaluate_rules(wh_json:get_value(<<"key">>, Resource), ToDID)
+%%AlanE: Added caller_id_number
+                         ,Number <- evaluate_rules(wh_json:get_value(<<"key">>, Resource), ToDID, whapps_call:caller_id_number(Call))
                          ,Number =/= []
                  ]};
         {error, R}=E ->
@@ -207,6 +209,26 @@ evaluate_rules([_, Regex], DestNum) ->
             [DestNum];
         _ -> []
     end.
+
+%% Added by AlanE
+evaluate_rules([_, Regex] = Key, DestNum, CallerIdNum) ->
+    case re:split(Regex, ":") of
+        [RegexCaller, RegexCalled] ->
+            evaluate_caller_id_rules(RegexCaller, RegexCalled, DestNum, CallerIdNum);
+        _ ->
+            evaluate_rules(Key, DestNum)
+     end.
+
+evaluate_caller_id_rules(RegexCaller, RegexCalled, DestNum, CallerIdNum)->
+    lager:debug("evaluate_called_id_route :~s@~s", [CallerIdNum, RegexCaller]),
+    case re:run(CallerIdNum, RegexCaller) of
+        {match, _ } ->
+            evaluate_rules([junk, RegexCalled], DestNum);
+        _Else ->
+            []
+    end.
+%% End added by AlanE
+
 
 maybe_from_uri(true, CNum, Realm) ->
     from_uri(CNum, Realm);
