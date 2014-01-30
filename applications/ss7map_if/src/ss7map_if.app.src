@@ -1,0 +1,12 @@
+{application, ss7map_if,
+ [
+  {description, "A whapp that interfaces with KageSys SS7 GW via AMQP"},
+  {vsn, "1"},
+  {registered, []},
+  {applications, [
+                  kernel,
+                  stdlib
+                 ]},
+  {mod, { ss7map_if_app, []}},
+  {env, []}
+ ]}.
