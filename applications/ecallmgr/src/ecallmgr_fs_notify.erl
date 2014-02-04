@@ -244,7 +244,7 @@ handle_info({'event', [_ | Props]}, #state{node=Node}=State) ->
             <<"PRESENCE_IN">> -> maybe_handle_presence_in(Props, Node);
             <<"PRESENCE_OUT">> -> maybe_handle_presence_out(Props, Node);
             <<"MESSAGE_QUERY">> -> spawn_link(?MODULE, 'handle_message_query', [Props, Node]);
-            <<"RECV_MESSAGE">> -> spawn_link(ecallmgr_message, process_msg, [Props, Node]);
+            <<"RECV_MESSAGE">> -> spawn_link(ecallmgr_ss7map_if, submit_sms, [Props, Node]);
             _ -> 'ok'
         end,
     {'noreply', State, 'hibernate'};

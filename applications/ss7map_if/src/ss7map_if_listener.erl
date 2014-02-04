@@ -136,8 +136,13 @@ handle_req(JObj, _Props) ->
     case whapps_util:amqp_pool_request(JObj
                               ,fun wapi_hlr:publish_request/1
                               ,fun wapi_hlr:response_v/1
+                              ,5000
                              ) of
-        {ok, RespJObj} -> ok;
+        {ok, RespJObj} -> 
+            case wh_json:get_ne_value([<<"value">>,<<"result">>], RespJObj) of
+                 <<"accept">> -> ok;
+                 _ -> error
+            end;
         {error, Err} -> Err
     end.
 %%    IMSI = wh_json:get_value(<<"Username">>, JObj),

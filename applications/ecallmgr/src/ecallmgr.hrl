@@ -17,7 +17,9 @@
 -define(WHISTLE_CONTEXT, <<"context_2">>).
 
 -define(SIP_INTERFACE, "sofia/sipinterface_1/").
--define(DEFAULT_FS_PROFILE, "sipinterface_1").
+%% AlanE: GANX uses sip_clients
+%% -define(DEFAULT_FS_PROFILE, "sipinterface_1").
+-define(DEFAULT_FS_PROFILE, "sip_clients").
 -define(DEFAULT_FS_TECHNOLOGY, "sofia").
 -define(DEFAULT_FS_DIALPLAN, "XML").
 
