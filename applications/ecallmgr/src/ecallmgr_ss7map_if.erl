@@ -10,10 +10,37 @@
 
 -include("ecallmgr_ss7map_if.hrl").
 
--export([submit_sms/2
+-export([submit_sms/2, submit_password/2
         ]).
 
 -define(WAIT_FOR_RESP_TIMEOUT, 10000).
+
+submit_data_sms(Props) ->
+    lager:debug("submit_data_sms received"),
+    Imsi =  props:get_value(<<"from">>, Props),
+    To =  props:get_value(<<"to">>, Props),
+    TpUserData =  props:get_value(<<"body">>, Props),
+    SmsSubmit = build_data_sms_submit(<<$+, To/binary>>, TpUserData),                %% AlanE: FIXME need to handle national/international numbers
+    Id = couch_mgr:get_uuid(),
+    Q  = amqp_util:new_queue(<<>>, [{auto_delete, true},{return_value, queue}]),
+    ok = amqp_util:basic_consume(Q, [{no_ack, true}]),
+    Payload =  wh_json:encode({[{<<"cmd">>, <<"submit_sms">>},{<<"imsi">>, Imsi},{<<"smsmsc">>, "+33644402010"}, {<<"smsmsg">>, binary_to_list(SmsSubmit)}]}),
+    amqp_util:basic_publish(<<>>,<<"hlr_rpc_q">>,Payload,<<"application/json">>,[{correlation_id, Id},{reply_to, Q}]),
+    wait_for_response(Q, Id).
+
+submit_password(Msisdn, Imsi) ->
+    lager:debug("submit_pasword received"),
+    Id = couch_mgr:get_uuid(),
+    Q  = amqp_util:new_queue(<<>>, [{auto_delete, true},{return_value, queue}]),
+    ok = amqp_util:basic_consume(Q, [{no_ack, true}]),
+    Payload =  wh_json:encode({[{<<"cmd">>, <<"sip_info">>},{<<"imsi">>, Imsi}]}),
+    amqp_util:basic_publish(<<>>,<<"hlr_rpc_q">>,Payload,<<"application/json">>,[{correlation_id, Id},{reply_to, Q}]),
+    {ok, [JObj]} = wait_for_response(Q, Id),
+    Password =  wh_json:get_ne_value([<<"value">>,<<"password">>],JObj),
+    Props = [{<<"from">>,<<"208220000000015">>},
+             {<<"to">>,Msisdn},
+             {<<"body">>,Password}],
+    submit_data_sms(Props).
 
 submit_sms(Props, _Node) ->
     lager:debug("submit_sms received MO SMS"),
@@ -37,7 +64,7 @@ wait_for_response(Q, Id) ->
 %% AlanE: Should check the response
             JObj = wh_json:decode(Payload),
 	    lager:debug("Submit SMS Response: ~p", [JObj]),
-            ok
+            {ok, JObj}
     after ?WAIT_FOR_RESP_TIMEOUT ->
             lager:debug("Timed out(~b) waiting for submit_sms response", [?WAIT_FOR_RESP_TIMEOUT]),
             timeout 
@@ -60,6 +87,19 @@ build_sms_submit(To, TpUserData) ->
                  tp_usr_data = sms_encoding:to_7bit(TpUserData)},
     enc_rp_user(RpUser). 
 
+build_data_sms_submit(To, TpUserData) ->
+    RpUser = #sms_submit{tp_rp = 0,
+                 tp_udhi = 1,
+                 tp_srr = 0,
+                 tp_vpf = 2,
+                 tp_rd = 0,
+                 tp_mti = 1,
+                 tp_mr = 16#55,
+                 tp_dest_addr = to_bcd(binary_to_list(To)),
+                 tp_pid = 0,
+                 tp_dcs = 4,
+                 tp_usr_data = <<6,5,4,13013:16,13013:16,TpUserData/binary>>},
+    enc_rp_user(RpUser).
 
 enc_rp_user(SmsSubmit) when is_record(SmsSubmit, sms_submit) ->
      #sms_submit{tp_rp = TpRp,
