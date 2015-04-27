@@ -202,6 +202,10 @@ get_req_data(Context, {<<"application/base64">>, Req1}, QS) ->
 get_req_data(Context, {<<"application/x-base64">>, Req1}, QS) ->
     lager:debug("application/x-base64 content type when getting req data"),
     decode_base64(cb_context:set_query_string(Context, QS), <<"application/base64">>, Req1);
+%% AlanE: quick hack to get triplet updload working FIXME
+get_req_data(Context, {<<"text/csv">>, Req1}, QS) ->
+    lager:debug("application/x-base64 content type when getting req data"),
+    decode_base64(cb_context:set_query_string(Context, QS), <<"application/base64">>, Req1);
 get_req_data(Context, {ContentType, Req1}, QS) ->
     lager:debug("unknown content-type: ~s", [ContentType]),
     extract_file(cb_context:set_query_string(Context, QS), ContentType, Req1).
@@ -292,17 +296,15 @@ extract_multipart_content({'body', Datum, Req}, JObj) ->
 -spec extract_file(cb_context:context(), ne_binary(), cowboy_req:req()) ->
                           {cb_context:context(), cowboy_req:req()}.
 extract_file(Context, ContentType, Req0) ->
-    case cowboy_req:body(Req0) of
-        {'error', 'badarg'} ->
-            lager:debug("failed to extract file body"),
-            {Context, Req0};
-        {'ok', FileContents, Req1} ->
+    case cowboy_http_req:body(Req0) of
+        {error, badarg} -> {Context, Req0};
+        {ok, FileContents0, Req1} ->
             %% http://tools.ietf.org/html/rfc2045#page-17
-            case cowboy_req:header(<<"content-transfer-encoding">>, Req1) of
-                {<<"base64">>, Req2} -> decode_base64(Context, ContentType, Req2);
-                {_Else, Req2} ->
-                    lager:debug("encoding: ~p", [_Else]),
-                    {ContentLength, Req3} = cowboy_req:header(<<"content-length">>, Req2),
+            case cowboy_http_req:header(<<"Content-Transfer-Encoding">>, Req1) of
+                <<"base64">> -> decode_base64(Context, ContentType, Req1);
+                _Else ->
+                    {EncodedType, FileContents} = decode_base64(FileContents0),
+                    {ContentLength, Req2} = cowboy_http_req:header('Content-Length', Req1),
                     Headers = wh_json:from_list([{<<"content_type">>, ContentType}
                                                  ,{<<"content_length">>, ContentLength}
                                                 ]),
@@ -310,9 +312,9 @@ extract_file(Context, ContentType, Req0) ->
                                                   ,{<<"contents">>, FileContents}
                                                  ]),
                     lager:debug("request is a file upload of type: ~s", [ContentType]),
-
-                    Filename = uploaded_filename(Context),
-                    {cb_context:set_req_files(Context, [{Filename, FileJObj}]), Req3}
+                    FileName = <<"uploaded_file_"
+                                 ,(wh_util:to_binary(wh_util:current_tstamp()))/binary>>,
+                    {Context#cb_context{req_files=[{FileName, FileJObj}]}, Req2}
             end
     end.
 

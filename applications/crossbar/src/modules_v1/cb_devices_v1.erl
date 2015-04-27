@@ -13,14 +13,14 @@
 -module(cb_devices_v1).
 
 -export([init/0
-         ,allowed_methods/0, allowed_methods/1, allowed_methods/3
+         ,allowed_methods/0, allowed_methods/1, allowed_methods/2, allowed_methods/3
          ,resource_exists/0, resource_exists/1, resource_exists/3
          ,billing/1
          ,authenticate/1
          ,authorize/1
          ,validate/1, validate/2, validate/4
          ,put/1
-         ,post/2
+         ,post/2, post/3
          ,delete/2
          ,reconcile_services/1
          ,is_ip_acl_unique/1
@@ -75,6 +75,10 @@ allowed_methods(<<"status">>) ->
     [?HTTP_GET];
 allowed_methods(_) ->
     [?HTTP_GET, ?HTTP_POST, ?HTTP_DELETE].
+
+%%AlanE
+allowed_methods(_DeviceID, _) ->
+    [?HTTP_GET, ?HTTP_POST].
 
 allowed_methods(_, ?QUICKCALL_PATH_TOKEN, _) ->
     [?HTTP_GET].
@@ -186,6 +190,17 @@ post(#cb_context{}=Context, DeviceId) ->
             error_used_mac_address(Context)
     end.
 
+post(Context, ID, <<"triplets">>) ->
+    #cb_context{doc=undefined, req_files=[{Filename, FileObj}], db_name=Db} = CB = update_hlr_file(ID, Context),
+    Contents = wh_json:get_value(<<"contents">>, FileObj),
+    case create_triplet_docs(Db, ID, Filename, Contents) of
+       {ok, Count}  ->
+           lager:debug("~w triplet docs created", [Count]),
+           CB;
+       {error, Reason} ->
+            crossbar_util:response(error, <<"error">>, 500, Reason, Context)
+    end.
+
 -spec put(cb_context:context()) -> cb_context:context().
 put(#cb_context{}=Context) ->
     Context1 = crossbar_doc:save(Context),
@@ -198,7 +213,15 @@ delete(#cb_context{}=Context, DeviceId) ->
     Context1 = crossbar_doc:delete(Context),
     _ = provisioner_util:maybe_delete_provision(Context),
     _ = maybe_remove_aggregate(DeviceId, Context),
+%% AlanE: Delete Triplet records
+    AccountDb = Context#cb_context.db_name,
+    {ok, Trips} = couch_mgr:get_results(AccountDb, <<"devices/triplet_listing">>, [{key, DeviceId}]),
+    lager:debug("spawning deleting triplets for Account: ~s device: ~s", [AccountDb, DeviceId]),
+    spawn(fun() -> delete_triplets(AccountDb, Trips) end),
     Context1.
+
+delete_triplets(AccountDb, Trips) ->
+   [ couch_mgr:del_doc(AccountDb, wh_json:get_value(<<"id">>, JObj)) || JObj <- Trips ].
 
 %%%===================================================================
 %%% Internal functions
@@ -593,3 +616,70 @@ extract_all_ips(JObj) ->
                             CIDR -> [CIDR|IPs]
                         end
                 end, [], wh_json:get_keys(JObj)).
+
+
+%% AlanE
+-spec update_hlr_file/2 :: (path_token(), #cb_context{}) -> #cb_context{}.
+update_hlr_file(ID, #cb_context{doc=JObj, req_files=[{Filename, FileObj}], db_name=Db}=Context) ->
+    Contents = wh_json:get_value(<<"contents">>, FileObj),
+    CT = wh_json:get_value([<<"headers">>, <<"content_type">>], FileObj),
+    lager:debug("file content type: ~s", [CT]),
+    Opts = [{headers, [{content_type, wh_util:to_list(CT)}]}],
+    OldAttachments = wh_json:get_value(<<"_attachments">>, JObj, wh_json:new()),
+    Id = wh_json:get_value(<<"_id">>, JObj),
+    _ = [couch_mgr:delete_attachment(Db, Id, Attachment)
+         || Attachment <- wh_json:get_keys(OldAttachments)
+        ],
+    crossbar_doc:save_attachment(ID, attachment_name(Filename, CT), Contents, Context, Opts).
+
+%%--------------------------------------------------------------------
+%% @private
+%% @doc
+%% Generate an attachment name if one is not provided and ensure
+%% it has an extension (for the associated content type)
+%% @end
+%%--------------------------------------------------------------------
+-spec attachment_name/2 :: (ne_binary(), ne_binary()) -> ne_binary().
+attachment_name(Filename, _CT) ->
+    Generators = [fun(A) ->
+                          case wh_util:is_empty(A) of
+                              true -> wh_util:to_hex_binary(crypto:rand_bytes(16));
+                              false -> A
+                          end
+                  end
+                  ,fun(A) ->
+                           case wh_util:is_empty(filename:extension(A)) of
+                               false -> A;
+                               true ->
+                                   <<A/binary, ".csv">>
+                           end
+                   end
+                 ],
+    lists:foldr(fun(F, A) -> F(A) end, Filename, Generators).
+
+
+create_triplet_docs(Db, ID, Filename, Bin) ->
+    A = binary_to_list(Bin),
+    L = string:tokens(A, ",\n\r"),
+    import_triplets(Db, ID, Filename, L, 0).
+
+import_triplets(_,_,_, [], Count) ->
+    {ok, Count};
+import_triplets(Db, ID, Filename, [Rand0, Sres0, Kc0 | T], Count) ->
+    Rand =  hex2b(Rand0),
+    Sres =  hex2b(Sres0),
+    Kc =  hex2b(Kc0),
+    Generators = [ fun(R) -> wh_json:set_value(<<"rand">>, Rand, R)  end
+                  ,fun(R) -> wh_json:set_value(<<"sres">>, Sres, R)  end
+                  ,fun(R) -> wh_json:set_value(<<"kc">>, Kc, R)  end
+                  ,fun(R) -> wh_json:set_value(<<"pvt_type">>, <<"triplet">>, R) end
+                  ,fun(R) -> wh_json:set_value(<<"device_id">>, ID, R) end
+                  ,fun(R) -> wh_json:set_value(<<"filename">>, Filename, R) end
+                 ],
+    JObj = lists:foldl(fun(F, A) -> F(A) end, wh_json:new(), Generators),
+    crossbar_doc:save(#cb_context{doc=JObj, db_name = Db, req_verb = <<"put">>}),
+    import_triplets(Db, ID, Filename, T, Count + 1).
+
+hex2b("0x" ++ L) -> list_to_binary(L);
+hex2b(L) -> list_to_binary(L).
+

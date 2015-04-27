@@ -133,24 +133,11 @@ handle_event(_JObj, _State) ->
 
 handle_req(JObj, _Props) ->
     lager:debug("HLR_IF received registration success"),
-    case whapps_util:amqp_pool_request(JObj
-                              ,fun wapi_hlr:publish_request/1
-                              ,fun wapi_hlr:response_v/1
-                              ,5000
-                             ) of
-        {ok, RespJObj} -> 
-            case wh_json:get_ne_value([<<"value">>,<<"result">>], RespJObj) of
-                 <<"accept">> -> ok;
-                 _ -> error
-            end;
-        {error, Err} -> Err
+    case is_uma(JObj) of 
+        false -> 
+            update_location(JObj);
+        true -> ok
     end.
-%%    IMSI = wh_json:get_value(<<"Username">>, JObj),
-%%    Id = couch_mgr:get_uuid(),
-%%    Q  = amqp_util:new_queue(<<>>, [{auto_delete, true},{return_value, queue}]),
-%%    ok = amqp_util:basic_consume(Q, [{no_ack, true}]),
-%%    Payload =  wh_json:encode({[{<<"cmd">>, <<"update_location">>},{<<"vlrid">>, <<"kazoo">>},{<<"imsi">>, IMSI}]}),
-%%    amqp_util:basic_publish(<<>>,<<"hlr_rpc_q">>,Payload,<<"application/json">>,[{correlation_id, Id},{reply_to, Q}]).
 
 %%--------------------------------------------------------------------
 %% @private
@@ -180,3 +167,24 @@ code_change(_OldVsn, State, _Extra) ->
 %%%===================================================================
 %%% Internal functions
 %%%===================================================================
+%% look for ;pid= tag
+is_uma(JObj) ->
+    Contact = wh_json:get_value(<<"Contact">>, JObj),
+    case re:run( Contact, <<"^.*;pid=(.*?);.*">>, [{'capture', 'all_but_first', 'binary'}]) of
+        nomatch -> false;
+        {match, _} -> true
+    end.
+
+update_location(JObj) ->
+    case whapps_util:amqp_pool_request(JObj
+                              ,fun wapi_hlr:publish_request/1
+                              ,fun wapi_hlr:response_v/1
+                              ,5000
+                             ) of
+        {ok, RespJObj} ->
+            case wh_json:get_ne_value([<<"value">>,<<"result">>], RespJObj) of
+                 <<"accept">> -> ok;
+                 _ -> error
+            end;
+        {error, Err} -> Err
+    end.

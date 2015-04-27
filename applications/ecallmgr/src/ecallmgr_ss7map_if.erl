@@ -21,25 +21,14 @@ submit_data_sms(Props) ->
     To =  props:get_value(<<"to">>, Props),
     TpUserData =  props:get_value(<<"body">>, Props),
     SmsSubmit = build_data_sms_submit(<<$+, To/binary>>, TpUserData),                %% AlanE: FIXME need to handle national/international numbers
-    Id = couch_mgr:get_uuid(),
-    Q  = amqp_util:new_queue(<<>>, [{auto_delete, true},{return_value, queue}]),
-    ok = amqp_util:basic_consume(Q, [{no_ack, true}]),
-    Payload =  wh_json:encode({[{<<"cmd">>, <<"submit_sms">>},{<<"imsi">>, Imsi},{<<"smsmsc">>, "+33644402010"}, {<<"smsmsg">>, binary_to_list(SmsSubmit)}]}),
-    amqp_util:basic_publish(<<>>,<<"hlr_rpc_q">>,Payload,<<"application/json">>,[{correlation_id, Id},{reply_to, Q}]),
-    wait_for_response(Q, Id).
+    ss7map_if:submit_sms(Imsi, "+33644402010", binary_to_list(SmsSubmit)).
 
 submit_password(Msisdn, Imsi) ->
     lager:debug("submit_pasword received"),
-    Id = couch_mgr:get_uuid(),
-    Q  = amqp_util:new_queue(<<>>, [{auto_delete, true},{return_value, queue}]),
-    ok = amqp_util:basic_consume(Q, [{no_ack, true}]),
-    Payload =  wh_json:encode({[{<<"cmd">>, <<"sip_info">>},{<<"imsi">>, Imsi}]}),
-    amqp_util:basic_publish(<<>>,<<"hlr_rpc_q">>,Payload,<<"application/json">>,[{correlation_id, Id},{reply_to, Q}]),
-    {ok, [JObj]} = wait_for_response(Q, Id),
-    Password =  wh_json:get_ne_value([<<"value">>,<<"password">>],JObj),
-    Props = [{<<"from">>,<<"208220000000015">>},
+    {ok, {_,Password}} =  ss7map_if:sip_info(Imsi),
+    Props = [{<<"from">>,<<"208220000000016">>},
              {<<"to">>,Msisdn},
-             {<<"body">>,Password}],
+             {<<"body">>,list_to_binary(Password)}],
     submit_data_sms(Props).
 
 submit_sms(Props, _Node) ->
@@ -48,28 +37,8 @@ submit_sms(Props, _Node) ->
     To =  props:get_value(<<"to">>, Props),
     [Imsi, _Realm] = binary:split(From, <<"@">>), 
     TpUserData =  props:get_value(<<"body">>, Props),
-    SmsSubmit = build_sms_submit(<<$+, To/binary>>, TpUserData),		%% AlanE: FIXME need to handle national/international numbers
-    Id = couch_mgr:get_uuid(),
-    Q  = amqp_util:new_queue(<<>>, [{auto_delete, true},{return_value, queue}]),
-    ok = amqp_util:basic_consume(Q, [{no_ack, true}]),
-    Payload =  wh_json:encode({[{<<"cmd">>, <<"submit_sms">>},{<<"imsi">>, Imsi},{<<"smsmsc">>, "+33644402010"}, {<<"smsmsg">>, binary_to_list(SmsSubmit)}]}),
-    amqp_util:basic_publish(<<>>,<<"hlr_rpc_q">>,Payload,<<"application/json">>,[{correlation_id, Id},{reply_to, Q}]),
-    wait_for_response(Q, Id).
-
-wait_for_response(Q, Id) ->
-    receive
-        #'basic.consume_ok'{} -> wait_for_response(Q, Id);
-        {#'basic.deliver'{routing_key = Q}, 
-         #amqp_msg{props = #'P_basic'{correlation_id = Id}, payload=Payload}} ->
-%% AlanE: Should check the response
-            JObj = wh_json:decode(Payload),
-	    lager:debug("Submit SMS Response: ~p", [JObj]),
-            {ok, JObj}
-    after ?WAIT_FOR_RESP_TIMEOUT ->
-            lager:debug("Timed out(~b) waiting for submit_sms response", [?WAIT_FOR_RESP_TIMEOUT]),
-            timeout 
-    end.
-
+    SmsSubmit = build_sms_submit(<<To/binary>>, TpUserData),		%% AlanE: FIXME need to handle national/international numbers
+    ss7map_if:submit_sms(Imsi, "+33644402010", binary_to_list(SmsSubmit)).
 
 -record (sms_submit, {tp_rp, tp_udhi, tp_srr, tp_vpf, tp_rd, tp_mti, tp_mr, tp_dest_addr, tp_pid, tp_dcs, tp_usr_data}).
 

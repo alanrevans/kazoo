@@ -649,7 +649,8 @@ retry504s(Fun, Cnt) ->
             {'error', wh_util:to_integer(ErrCode)};
         {'error', _Other}=E ->
             whistle_stats:increment_counter(<<"bigcouch-other-error">>),
-            E;
+            retry504s(Fun, Cnt+1);
+%%            E;
         {'ok', _Other}=OK -> OK;
         {'EXIT', _E} ->
             ST = erlang:get_stacktrace(),

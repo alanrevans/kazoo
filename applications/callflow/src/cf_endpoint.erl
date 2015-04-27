@@ -643,6 +643,7 @@ create_sip_endpoint(Endpoint, Properties, Call) ->
          ,{<<"Hold-Media">>, cf_attributes:moh_attributes(Endpoint, <<"media_id">>, Call)}
          ,{<<"Presence-ID">>, cf_attributes:presence_id(Endpoint, Call)}
          ,{<<"SIP-Headers">>, generate_sip_headers(Endpoint, Call)}
+         ,{<<"SIP-Interface">>, get_sip_interface(SIPJObj)}
          ,{<<"Custom-Channel-Vars">>, generate_ccvs(Endpoint, Call)}
          ,{<<"Flags">>, get_outbound_flags(Endpoint)}
          ,{<<"Force-Fax">>, get_force_fax(Endpoint)}
@@ -669,6 +670,9 @@ validate_sip_transport(<<"udp">>) -> <<"udp">>;
 validate_sip_transport(<<"tls">>) -> <<"tls">>;
 validate_sip_transport(<<"sctp">>) -> <<"sctp">>;
 validate_sip_transport(_) -> 'undefined'.
+
+get_sip_interface(SIPJObj) ->
+    wh_json:get_value(<<"custom_sip_interface">>, SIPJObj).
 
 %%--------------------------------------------------------------------
 %% @private
@@ -714,7 +718,7 @@ create_call_fwd_endpoint(Endpoint, Properties, CallFwd, Call) ->
                        end,
     Prop = [{<<"Invite-Format">>, <<"route">>}
             ,{<<"To-DID">>, wh_json:get_value(<<"number">>, Endpoint, whapps_call:request_user(Call))}
-            ,{<<"Route">>, <<"loopback/", (wh_json:get_value(<<"number">>, CallFwd, <<"unknown">>))/binary>>}
+            ,{<<"Route">>, <<"loopback/", (wh_json:get_value(<<"number">>, CallFwd, <<"unknown">>))/binary, "/context_2">>}
             ,{<<"Ignore-Early-Media">>, IgnoreEarlyMedia}
             ,{<<"Bypass-Media">>, <<"false">>}
             ,{<<"Endpoint-Progress-Timeout">>, get_progress_timeout(Endpoint)}

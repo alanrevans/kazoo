@@ -222,6 +222,7 @@
                                ,{<<"intercept_unanswered_only">>, <<"intercept_unanswered_only">>}
                                ,{<<"conference_member_nospeak_relational">>, <<"conference_member_nospeak_relational">>}
                                ,{<<"conference_member_nospeak_check">>, <<"conference_member_nospeak_check">>}
+                               ,{<<"origination_nested_vars">>, <<"origination_nested_vars">>}
                               ]).
 
 %% [{FreeSWITCH-App-Name, Kazoo-App-Name}]

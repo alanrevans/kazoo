@@ -524,7 +524,7 @@ build_originate_args(Action, Endpoints, JObj, FetchId) ->
                                {'error', ne_binary() | 'timeout' | 'crash'}.
 originate_execute(Node, Dialstrings, Timeout) ->
     lager:debug("executing on ~s: ~s", [Node, Dialstrings]),
-    try freeswitch:api(Node, 'originate', wh_util:to_list(Dialstrings), Timeout*1000) of
+    try freeswitch:api(Node, 'expand',  wh_util:to_list(<<"originate ", Dialstrings/binary>>), Timeout*1000) of
         {'ok', <<"+OK ", UUID/binary>>} ->
             {'ok', wh_util:strip_binary(binary:replace(UUID, <<"\n">>, <<>>))};
         {'ok', Other} ->

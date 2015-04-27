@@ -192,7 +192,7 @@ handle_info(maintain_connection, #wh_couch_connection{ready = Ready
             erlang:send_after(5000, self(), maintain_connection),
             {noreply, connection_ready(Connection)};
         {ok, _} ->
-            erlang:send_after(5000, self(), maintain_connection),
+            erlang:send_after(60000, self(), maintain_connection),
             {noreply, Connection};
         _Else ->
             erlang:send_after(1000, self(), maintain_connection),
