@@ -66,7 +66,7 @@ groups(Call, ViewOptions) ->
 caller_id(Attribute, Call) ->
     CCVs = whapps_call:custom_channel_vars(Call),
     Inception = whapps_call:inception(Call),
-    case (Inception =/= 'undefined'
+    case (Inception =:= <<"off-net">>
           andalso not wh_json:is_true(<<"Call-Forward">>, CCVs))
         orelse wh_json:is_true(<<"Retain-CID">>, CCVs)
     of
@@ -366,7 +366,7 @@ maybe_normalize_callee(Number, Name, _, _) ->
 
 -spec determine_callee_attribute(whapps_call:call()) -> ne_binary().
 determine_callee_attribute(Call) ->
-    case whapps_call:inception(Call) =/= 'undefined' of
+case whapps_call:inception(Call) =:= <<"off-net">> of
         'true' -> <<"external">>;
         'false' -> <<"internal">>
     end.
