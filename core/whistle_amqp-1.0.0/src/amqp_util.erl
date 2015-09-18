@@ -605,7 +605,8 @@ new_queue(Queue, Options) when is_binary(Queue) ->
       ,exclusive = ?P_GET('exclusive', Options, 'false')
       ,auto_delete = ?P_GET('auto_delete', Options, 'true')
       ,nowait = ?P_GET('nowait', Options, 'false')
-      ,arguments = queue_arguments(?P_GET('arguments', Options, []))
+      ,arguments = ?P_GET('arguments', Options, [])
+%%      ,arguments = queue_arguments(?P_GET('arguments', Options, []))
      },
 
     %% can be queue | message_count | consumer_count | all
