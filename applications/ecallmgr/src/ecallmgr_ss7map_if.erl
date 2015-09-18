@@ -37,7 +37,7 @@ submit_sms(Props, _Node) ->
     To =  props:get_value(<<"to">>, Props),
     [Imsi, _Realm] = binary:split(From, <<"@">>), 
     TpUserData =  props:get_value(<<"body">>, Props),
-    SmsSubmit = build_sms_submit(<<To/binary>>, TpUserData),		%% AlanE: FIXME need to handle national/international numbers
+    SmsSubmit = build_sms_submit(<<$+, To/binary>>, TpUserData),		%% AlanE: FIXME need to handle national/international numbers
     ss7map_if:submit_sms(Imsi, "+33644402010", binary_to_list(SmsSubmit)).
 
 -record (sms_submit, {tp_rp, tp_udhi, tp_srr, tp_vpf, tp_rd, tp_mti, tp_mr, tp_dest_addr, tp_pid, tp_dcs, tp_usr_data}).

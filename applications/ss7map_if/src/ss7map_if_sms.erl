@@ -20,6 +20,7 @@
          ,terminate/2, code_change/3]).
 
 -include("ss7map_if.hrl").
+-define(DEFAULT_FS_PROFILE, <<"sofia/sip_clients/">>).
 
 -record(state, {}).
 
@@ -87,11 +88,20 @@ handle_info({#'basic.deliver'{exchange = <<"hlr_sms_d_x">>,
              State) ->
 
     lager:debug("~p:~p  #'basic.deliver' reply_to:~p correlation_id:~p payload:~p~n", [?MODULE, self(), ReplyQ, CorrelId, Payload]),
+
+	%% Find the SIP profile from the HLR (GAN Propertties of the Device in Kazoo UI
+ 	{ok, Sip_Info} = whapps_util:amqp_pool_request([{<<"imsi">>, IMSI}], 
+													fun wapi_hlr:publish_sip_info_req/1, 
+													fun wapi_hlr:sip_info_req_v/1, 
+													5000),
+	Sip_Interface = wh_json:get_ne_value([<<"value">>, <<"custom_sip_interface">>], Sip_Info, ?DEFAULT_FS_PROFILE),
+    [<<"sofia">>,Profile] = binary:split(Sip_Interface, <<"/">>, [global,trim]),
+
     case  lookup_contact(IMSI, <<"sip.kagesys.com">>) of
         {ok, Contact} ->
             {From, Body} =  decode(Payload),
             Header = [
-               {"profile", "sip_clients"}
+               {"profile", Profile}
               ,{"content-length", wh_util:to_list(size(Body))}
               ,{"content-type", "text/plain"}
               ,{"to", <<"sip:", IMSI/binary, "@sip.kagesys.com">>}
@@ -99,10 +109,10 @@ handle_info({#'basic.deliver'{exchange = <<"hlr_sms_d_x">>,
               ,{"contact", Contact}
               ,{"body", Body}
             ],
-            Resp = freeswitch:sendevent('freeswitch@kazoo.kagesys.com', 'SEND_MESSAGE', Header),
+            Resp = freeswitch:sendevent('freeswitch@freeswitch-1a.kagesys.com', 'SEND_MESSAGE', Header),
             lager:debug("sent SIP/SIMPLE Msg to '~s': ~p", [IMSI, Resp]);
         _Else ->
-            lager:debug("drop SIP/SIMPLE Msg '~s' not registered", [IMSI])
+            lager:info("drop SIP/SIMPLE Msg '~s' not registered", [IMSI])
     end, 
     amqp_util:basic_publish(<<>>, ReplyQ, <<"ok">>, <<"application/json">>,[{correlation_id, CorrelId}]),
     {noreply, State};
@@ -147,8 +157,8 @@ lookup_contact(User, Realm) ->
                 [Contact|_] ->
                     lager:info("fetched user ~s@~s contact ~s", [User, Realm, Contact]),
                     {'ok', Contact};
-                _Else ->
-                    lager:info("contact query for user ~s@~s returned an empty result", [User, Realm]),
+                [] ->
+                    lager:info("contact query for user ~s@~s returned an empty result ~p", [User, Realm]),
                     {'error', 'not_found'}
             end;
         _Else ->

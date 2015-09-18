@@ -176,9 +176,18 @@ is_uma(JObj) ->
     end.
 
 update_location(JObj) ->
-    case whapps_util:amqp_pool_request(JObj
-                              ,fun wapi_hlr:publish_request/1
-                              ,fun wapi_hlr:response_v/1
+    Props0 = wh_json:to_proplist(JObj),
+    Defaults = wh_api:default_headers(props:get_value(<<"Server-ID">>, Props0), <<"ss7map_if">>, wh_util:to_binary(?MODULE)),
+    IMSI = props:get_value(<<"Username">>, Props0),
+    Props = Defaults ++ [{<<"Event-Category">>, <<"HLR">>},{<<"Event-Name">>, <<"update_location">>}
+            ,{<<"Msg-ID">>, props:get_value(<<"Msg-ID">>, Props0)}
+            ,{<<"cmd">>, <<"update_location">>}
+            ,{<<"vlrid">>, <<"kazoo.", IMSI/binary>>}
+            ,{<<"imsi">>, IMSI}
+            ],
+    case whapps_util:amqp_pool_request(Props
+                              ,fun wapi_hlr:publish_update_location_req/1
+                              ,fun wapi_hlr:update_location_resp_v/1
                               ,5000
                              ) of
         {ok, RespJObj} ->

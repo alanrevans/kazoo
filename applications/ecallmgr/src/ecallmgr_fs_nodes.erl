@@ -655,7 +655,7 @@ start_preconfigured_servers() ->
             start_preconfigured_servers();
         Nodes when is_list(Nodes) ->
             lager:info("successfully retrieved FreeSWITCH nodes to connect with, doing so..."),
-            [spawn(fun() -> start_node_from_config(N) end) || N <- Nodes];
+            [spawn(fun() -> maybe_start_node_from_config(N) end) || N <- Nodes];
         'undefined' ->
             lager:debug("failed to receive a response for node configs"),
             timer:sleep(5000),
@@ -668,17 +668,39 @@ start_preconfigured_servers() ->
             start_preconfigured_servers()
     end.
 
-start_node_from_config(MaybeJObj) ->
+maybe_start_node_from_config(MaybeJObj) ->
     case wh_json:is_json_object(MaybeJObj) of
-        'false' -> ?MODULE:add(wh_util:to_atom(MaybeJObj, 'true'));
+        'false' -> maybe_add_node_from_config(MaybeJObj, []);
         'true' ->
             {[Cookie], [Node]} = wh_json:get_values(MaybeJObj),
-            try ?MODULE:add(wh_util:to_atom(Node, 'true'), wh_util:to_atom(Cookie, 'true')) of
+            try maybe_add_node_from_config(Node, wh_util:to_atom(Cookie, 'true')) of
                 _OK -> lager:debug("added ~s(~s) successfully: ~p", [Node, Cookie, _OK])
             catch
                 _E:_R -> lager:debug("failed to add ~s(~s): ~s: ~p", [Node, Cookie, _E, _R])
             end
     end.
+
+maybe_add_node_from_config(Node, Opt) ->
+        case ecallmgr_config:get_boolean(<<"fs_localhost_only">>, 'false') of
+                'false' -> ?MODULE:add(wh_util:to_atom(Node, 'true'), Opt);
+                'true' ->
+                        case re:run(binary_to_list(Node), net_adm:localhost(), [{capture, none}]) of
+                                match ->  ?MODULE:add(wh_util:to_atom(Node, 'true'), Opt);
+                                _ -> lager:debug("FS node ~s not added due to fs_localhost_only filter", [Node])
+                        end
+        end.
+
+% start_node_from_config(MaybeJObj) ->
+%    case wh_json:is_json_object(MaybeJObj) of
+%        'false' -> ?MODULE:add(wh_util:to_atom(MaybeJObj, 'true'));
+%        'true' ->
+%            {[Cookie], [Node]} = wh_json:get_values(MaybeJObj),
+%            try ?MODULE:add(wh_util:to_atom(Node, 'true'), wh_util:to_atom(Cookie, 'true')) of
+%                _OK -> lager:debug("added ~s(~s) successfully: ~p", [Node, Cookie, _OK])
+%            catch
+%                _E:_R -> lager:debug("failed to add ~s(~s): ~s: ~p", [Node, Cookie, _E, _R])
+%            end
+%    end.
 
 print_details([]) ->
     io:format("No nodes found!~n", []);

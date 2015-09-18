@@ -30,6 +30,7 @@
                            end(Name, Type)).
 
 -define(CHILDREN, [{?ECALLMGR_AMQP_POOL, 'pool'}
+                   ,{?WHAPPS_AMQP_POOL, 'pool'}				%% AlanE: Needed for SIP based MO SMS
                    ,{'ecallmgr_init', 'worker'}
                    ,{'ecallmgr_auxiliary_sup', 'supervisor'}
                    ,{'ecallmgr_call_sup', 'supervisor'}
