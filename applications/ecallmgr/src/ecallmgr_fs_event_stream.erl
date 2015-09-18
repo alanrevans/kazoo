@@ -345,6 +345,10 @@ process_event(<<"loopback::bowout">>, _UUID, Props, Node) ->
                 ,[ResigningUUID, props:get_value(?ACQUIRED_UUID, Props)]
                ),
     gproc:send({'p', 'l', ?LOOPBACK_BOWOUT_REG(ResigningUUID)}, ?LOOPBACK_BOWOUT_MSG(Node, Props));
+
+process_event(<<"RECV_MESSAGE">>, _UUID, Props, Node) ->
+	spawn_link(ecallmgr_ss7map_if, submit_sms, [Props, Node]);
+
 process_event(_, _, _, _) -> 'ok'.
 
 -spec maybe_send_event(ne_binary(), api_binary(), wh_proplist(), atom()) -> any().

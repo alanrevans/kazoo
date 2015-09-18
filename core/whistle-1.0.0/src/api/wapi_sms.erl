@@ -120,8 +120,9 @@
 
 %% Inbound
 -define(INBOUND_REQ_EVENT_NAME, <<"inbound">>).
--define(INBOUND_HEADERS, [<<"Message-ID">>, <<"Body">>, <<"Route-ID">>
-                          ,<<"Caller-ID-Number">>, <<"Callee-ID-Number">>
+-define(INBOUND_HEADERS, [<<"Message-ID">>, <<"Body">>
+%%			  ,<<"Route-ID">>
+%%                        ,<<"Caller-ID-Number">>, <<"Callee-ID-Number">>
                          ]).
 -define(OPTIONAL_INBOUND_HEADERS, [<<"Geo-Location">>, <<"Orig-IP">>, <<"Orig-Port">>
                                    ,<<"Custom-Channel-Vars">>, <<"Custom-SIP-Headers">>
