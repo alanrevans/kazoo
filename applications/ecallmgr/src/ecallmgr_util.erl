@@ -171,9 +171,12 @@ get_sip_from(Props) ->
 get_sip_from(Props, <<"outbound">>) ->
     case props:get_value(<<"Other-Leg-Channel-Name">>, Props) of
         'undefined' ->
-            Number = props:get_value(<<"Other-Leg-Caller-ID-Number">>, Props, <<"nouser">>),
+            Number = props:get_first_defined([<<"Other-Leg-Caller-ID-Number">>
+                                             ,<<"from_user">>
+                                             ], Props, <<"nouser">>),
             Realm = props:get_first_defined([?GET_CCV(<<"Realm">>)
                                              ,<<"variable_sip_auth_realm">>
+                                             ,<<"from_host">>
                                             ], Props, ?DEFAULT_REALM),
             props:get_value(<<"variable_sip_from_uri">>
                             ,Props
@@ -204,6 +207,7 @@ get_sip_request(Props) ->
                                      ,<<"sip_auth_realm">>
                                      ,<<"sip_to_host">>
                                      ,<<"variable_sip_req_host">>
+                                     ,<<"to_host">>
                                     ], Props, ?DEFAULT_REALM),
     <<User/binary, "@", Realm/binary>>.
 

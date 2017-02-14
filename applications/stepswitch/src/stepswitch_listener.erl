@@ -30,6 +30,8 @@
                   ]).
 -define(RESPONDERS, [{'stepswitch_inbound'
                       ,[{<<"dialplan">>, <<"route_req">>}]}
+                      ,{'stepswitch_inbound_uma'
+                      ,[{<<"dialplan">>, <<"route_req">>}]}
                      ,{'stepswitch_outbound'
                        ,[{<<"resource">>, <<"offnet_req">>}]}
                      ,{'stepswitch_authn_req'

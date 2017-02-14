@@ -22,7 +22,7 @@ ebin/$(PROJECT).app: src/*.erl
 	@mkdir -p ebin/
 	erlc -v $(ERLC_OPTS) -o ebin/ -pa ebin/ $?
 
-USR_INCLUDE := $(wildcard $(shell dirname `which erl`)/../erts-*/include)
+USR_INCLUDE := $(wildcard $(shell dirname `which erl`)/../lib/erlang/erts-*/include)
 ifeq ($(USR_INCLUDE),)
 	USR_INCLUDE = /usr/lib/erlang/usr/include
 endif
@@ -31,7 +31,7 @@ ERL_INTERFACE := $(find $USR_INCLUDE/../../ -type d -name "erl_interface-*" -pri
 ifeq ($(ERL_INTERFACE),)
 # 3.7.9 is R15B03-1
 # Change to 3.7.20 for 17.5
-	ERL_INTERFACE := $(USR_INCLUDE)/../../lib/erl_interface-3.7.9
+	ERL_INTERFACE := $(USR_INCLUDE)/../../lib/erl_interface-3.8.1
 endif
 
 priv/syslog_drv.so: c_src/syslog_drv.c

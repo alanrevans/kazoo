@@ -27,7 +27,7 @@ json: JSON = $(shell find priv/couchdb -name *.json -print)
 json:
 	@$(ROOT)/scripts/format-json.sh $(JSON)
 
-ERL_INCLUDES := $(wildcard $(shell dirname `which erl`)/../erts-*/include)
+ERL_INCLUDES := $(wildcard $(shell dirname `which erl`)/../lib/erlang/erts-*/include)
 ifeq ($(ERL_INCLUDES),)
 	ERL_INCLUDES = /usr/lib/erlang/usr/include
 endif

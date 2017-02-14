@@ -1,0 +1,314 @@
+%%%-------------------------------------------------------------------
+%%% @copyright (C) 2011-2015, 2600Hz
+%%% @doc
+%%% @end
+%%%-------------------------------------------------------------------
+-module(stepswitch_inbound_uma).
+
+-export([handle_req/2]).
+
+-include("stepswitch.hrl").
+
+%%--------------------------------------------------------------------
+%% @public
+%% @doc
+%%
+%% @end
+%%--------------------------------------------------------------------
+-spec handle_req(wh_json:object(), wh_proplist()) -> 'ok'.
+handle_req(JObj, _Props) ->
+    'true' = wapi_route:req_v(JObj),
+    _ = wh_util:put_callid(JObj),
+    case wh_json:get_ne_value(?CCV(<<"Account-ID">>), JObj) of
+        'undefined' -> maybe_relay_request(JObj);
+        _AcctID -> 'ok'
+    end.
+
+%%--------------------------------------------------------------------
+%% @private
+%% @doc
+%% handle a request inbound from offnet
+%% @end
+%%--------------------------------------------------------------------
+-spec maybe_relay_request(wh_json:object()) -> 'ok'.
+maybe_relay_request(JObj) ->
+    Number = stepswitch_util:get_inbound_destination(JObj),
+    case lookup_number(Number) of
+        {'error', _R} ->
+            lager:info("unable to determine account for ~s: ~p", [Number, _R]);
+        {'ok', _, NumberProps} ->
+            Routines = [fun set_account_id/2
+                        ,fun set_authorizing_id/2
+                        ,fun set_authorizing_type/2
+                        ,fun set_ignore_display_updates/2
+                        ,fun set_inception/2
+                        ,fun maybe_find_resource/2
+                        ,fun maybe_format_destination/2
+                        ,fun maybe_set_ringback/2
+                        ,fun maybe_set_transfer_media/2
+                        ,fun maybe_add_prepend/2
+                        ,fun maybe_blacklisted/2
+                       ],
+            _ = lists:foldl(fun(F, J) -> F(NumberProps, J) end
+                            ,JObj
+                            ,Routines
+                           ),
+            'ok'
+    end.
+
+%%--------------------------------------------------------------------
+%% @private
+%% @doc
+%% determine the e164 format of the inbound number
+%% @end
+%%--------------------------------------------------------------------
+-spec set_account_id(number_properties(), wh_json:object()) ->
+                            wh_json:object().
+set_account_id(NumberProps, JObj) ->
+    AccountId = props:get_binary_value(<<"account_id">>, NumberProps),
+    wh_json:set_value(?CCV(<<"Account-ID">>), AccountId, JObj).
+
+
+set_authorizing_id(_, JObj) ->
+    wh_json:set_value(?CCV(<<"Authorizing-ID">>), <<"kagesys_uma_device">>, JObj).
+
+set_authorizing_type(_, JObj) ->
+    wh_json:set_value(?CCV(<<"Authorizing-Type">>), <<"device">>, JObj).
+    
+%%--------------------------------------------------------------------
+%% @private
+%% @doc
+%%
+%% @end
+%%--------------------------------------------------------------------
+-spec set_ignore_display_updates(number_properties(), wh_json:object()) ->
+                                        wh_json:object().
+set_ignore_display_updates(_, JObj) ->
+    wh_json:set_value(?CCV(<<"Ignore-Display-Updates">>), <<"true">>, JObj).
+
+%%--------------------------------------------------------------------
+%% @private
+%% @doc
+%%
+%% @end
+%%--------------------------------------------------------------------
+-spec set_inception(number_properties(), wh_json:object()) ->
+                           wh_json:object().
+set_inception(_, JObj) ->
+    Request = wh_json:get_value(<<"Request">>, JObj),
+    wh_json:set_value(?CCV(<<"Inception">>), Request, JObj).
+
+%%--------------------------------------------------------------------
+%% @private
+%% @doc
+%%
+%% @end
+%%--------------------------------------------------------------------
+-spec maybe_find_resource(number_properties(), wh_json:object()) ->
+                                 wh_json:object().
+maybe_find_resource(_NumberProps, JObj) ->
+    case stepswitch_resources:reverse_lookup(JObj) of
+        {'error', 'not_found'} -> JObj;
+        {'ok', ResourceProps} ->
+            Routines = [fun add_resource_id/2
+                        ,fun maybe_add_t38_settings/2
+                       ],
+            lists:foldl(fun(F, J) ->  F(J, ResourceProps) end
+                        ,JObj
+                        ,Routines
+                       )
+    end.
+
+-spec add_resource_id(wh_json:object(), wh_proplist()) -> wh_json:object().
+add_resource_id(JObj, ResourceProps) ->
+    ResourceId = props:get_value('resource_id', ResourceProps),
+    wh_json:set_values([{?CCV(<<"Resource-ID">>), ResourceId}
+                        ,{?CCV(<<"Global-Resource">>), props:get_is_true('global', ResourceProps)}
+                        ,{?CCV(<<"Authorizing-Type">>), <<"resource">>}
+                       %% TODO
+                       %% we need to make sure that Authorizing-ID is used
+                       %% with Authorizing-Type in ALL whapps
+                       %% when this is done remove the comment below
+                       %% ,{?CCV(<<"Authorizing-ID">>), ResourceId}
+                       ]
+                       ,JObj
+                      ).
+
+-spec maybe_add_t38_settings(wh_json:object(), wh_proplist()) -> wh_json:object().
+maybe_add_t38_settings(JObj, ResourceProps) ->
+    case props:get_value('fax_option', ResourceProps) of
+        'true' ->
+            wh_json:set_value(?CCV(<<"Resource-Fax-Option">>)
+                              ,props:get_value('fax_option', ResourceProps)
+                              ,JObj
+                             );
+        <<"auto">> ->
+            wh_json:set_value(?CCV(<<"Resource-Fax-Option">>)
+                              ,props:get_value('fax_option', ResourceProps)
+                              ,JObj
+                             );
+        _ -> JObj
+    end.
+
+-spec maybe_format_destination(number_properties(), wh_json:object()) -> wh_json:object().
+maybe_format_destination(_NumberProps, JObj) ->
+    case wh_json:get_value(?CCV(<<"Resource-ID">>), JObj) of
+        'undefined' -> JObj;
+        ResourceId ->
+            case stepswitch_resources:get_props(ResourceId) of
+                'undefined' -> JObj;
+                Resource ->
+                    stepswitch_formatters:apply(JObj, props:get_value(<<"Formatters">>, Resource, wh_json:new()), 'inbound')
+            end
+    end.
+
+%%--------------------------------------------------------------------
+%% @private
+%% @doc
+%%
+%% @end
+%%--------------------------------------------------------------------
+-spec maybe_set_ringback(number_properties(), wh_json:object()) ->
+                                wh_json:object().
+maybe_set_ringback(NumberProps, JObj) ->
+    case wh_number_properties:ringback_media_id(NumberProps) of
+        'undefined' -> JObj;
+        MediaId ->
+            wh_json:set_value(?CCV(<<"Ringback-Media">>), MediaId, JObj)
+    end.
+
+%%--------------------------------------------------------------------
+%% @private
+%% @doc
+%% determine the e164 format of the inbound number
+%% @end
+%%--------------------------------------------------------------------
+-spec maybe_set_transfer_media(number_properties(), wh_json:object()) ->
+                                      wh_json:object().
+maybe_set_transfer_media(NumberProps, JObj) ->
+    case wh_number_properties:transfer_media_id(NumberProps) of
+        'undefined' -> JObj;
+        MediaId ->
+            wh_json:set_value(?CCV(<<"Transfer-Media">>), MediaId, JObj)
+    end.
+
+%%--------------------------------------------------------------------
+%% @private
+%% @doc
+%% build the JSON to set the custom channel vars with the calls
+%% account and authorizing  ID
+%% @end
+%%--------------------------------------------------------------------
+
+%%--------------------------------------------------------------------
+%% @private
+%% @doc
+%% @end
+%%--------------------------------------------------------------------
+-spec maybe_add_prepend(number_properties(), wh_json:object()) ->
+                               wh_json:object().
+maybe_add_prepend(NumberProps, JObj) ->
+    case wh_number_properties:prepend(NumberProps) of
+        'undefined' -> JObj;
+        Prepend -> wh_json:set_value(<<"Prepend-CID-Name">>, Prepend, JObj)
+    end.
+
+%%--------------------------------------------------------------------
+%% @private
+%% @doc
+%% relay a route request once populated with the new properties
+%% @end
+%%--------------------------------------------------------------------
+-spec maybe_blacklisted(number_properties(), wh_json:object()) ->
+                           wh_json:object().
+maybe_blacklisted(_NumberProps, JObj) ->
+%%    case is_blacklisted(JObj) of
+%%        'true' -> JObj;
+%%        'false' ->
+%%            _ = relay_request(JObj),
+%%            JObj
+%%    end.
+    relay_request(JObj),
+    JObj.
+
+%%--------------------------------------------------------------------
+%% @private
+%% @doc
+%% relay a route request once populated with the new properties
+%% @end
+%%--------------------------------------------------------------------
+-spec relay_request(wh_json:object()) -> wh_json:object().
+relay_request(JObj) ->
+    wapi_route:publish_req(JObj),
+    lager:debug("relaying route request").
+
+%%--------------------------------------------------------------------
+%% @private
+%% @doc
+%%
+%% @end
+%%--------------------------------------------------------------------
+-spec is_blacklisted(wh_json:object()) -> boolean().
+is_blacklisted(JObj) ->
+    AccountId = wh_json:get_ne_value(?CCV(<<"Account-ID">>), JObj),
+    case get_blacklists(AccountId) of
+        {'error', _R} ->
+            lager:debug("not blacklisted ~p", [_R]),
+            'false';
+        {'ok', Blacklists} ->
+            Blacklist = get_blacklist(AccountId, Blacklists),
+            Number = wh_json:get_value(<<"Caller-ID-Number">>, JObj),
+            case wh_json:get_value(Number, Blacklist) of
+                'undefined' ->
+                    lager:debug("~p not blacklisted, did not match any rule", [Number]),
+                    'false';
+                _Rule ->
+                    lager:info("~p is blacklisted", [Number]),
+                    'true'
+            end
+    end.
+
+-spec get_blacklists(ne_binary()) ->
+                            {'ok', ne_binaries()} |
+                            {'error', any()}.
+get_blacklists(AccountId) ->
+    case kz_account:fetch(AccountId) of
+        {'error', _R}=E ->
+            lager:error("could not open account doc ~s : ~p", [AccountId, _R]),
+            E;
+        {'ok', Doc} ->
+            case wh_json:get_value(<<"blacklists">>, Doc, []) of
+                [] -> {'error', 'undefined'};
+                [_|_]=Blacklists-> {'ok', Blacklists};
+                _ -> {'error', 'miss_configured'}
+            end
+    end.
+
+-spec get_blacklist(ne_binary(), ne_binaries()) -> wh_json:object().
+get_blacklist(AccountId, Blacklists) ->
+    AccountDb = wh_util:format_account_id(AccountId, 'encoded'),
+    lists:foldl(
+        fun(BlacklistId, Acc) ->
+            case couch_mgr:open_cache_doc(AccountDb, BlacklistId) of
+                {'error', _R} ->
+                    lager:error("could not open ~s in ~s: ~p", [BlacklistId, AccountDb, _R]),
+                    Acc;
+                {'ok', Doc} ->
+                    Numbers = wh_json:get_value(<<"numbers">>, Doc, wh_json:new()),
+                    wh_json:merge_jobjs(Acc, Numbers)
+            end
+        end
+        ,wh_json:new()
+        ,Blacklists
+    ).
+    
+-spec lookup_number(ne_binary()) ->
+                           {'ok', ne_binary(), number_properties()} |
+                           {'error', any()}.
+lookup_number(Number) ->
+	case catch ss7c_if:get_subscriber_info(<<"msisdn">>, Number, rest) of
+		{ok, Props} -> {ok, props:get_binary_value(<<"account_id">>, Props), Props};
+		_ -> {error, undefined}
+	end.
+	
+

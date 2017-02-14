@@ -41,7 +41,7 @@
           ,<<"Callee-ID-Name">>, <<"Callee-ID-Number">>
           ,<<"From-User">>, <<"From-Realm">>, <<"From-URI">>
           ,<<"To-User">>, <<"To-Realm">>, <<"To-URI">>
-          ,<<"Dial-Endpoint-Method">>
+          ,<<"Dial-Endpoint-Method">>, <<"Content-Type">>
           ,<<"Custom-Channel-Vars">>, <<"Custom-SIP-Headers">>
           ,<<"SIP-Transport">>, <<"SIP-Headers">>
           ,<<"Route-ID">>, <<"Route-Type">>

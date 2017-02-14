@@ -53,7 +53,7 @@
                                      ,<<"Switch-URL">>, <<"Switch-URI">>
                                      ,<<"Ringback-Media">>, <<"Transfer-Media">>
                                      ,<<"SIP-Request-Host">>, <<"Message-ID">>
-                                     ,<<"Body">>
+                                     ,<<"Content-Type">>, <<"Body">>
                                      ,<<"From-Tag">>, <<"To-Tag">>
                                      ,<<"Prepend-CID-Name">>
                                     ]).

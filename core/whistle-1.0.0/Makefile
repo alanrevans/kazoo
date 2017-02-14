@@ -6,7 +6,7 @@ EBINS = $(shell find $(ROOT)/deps/lager-* -maxdepth 2 -name ebin -print) \
 	$(shell find $(ROOT)/deps/rabbitmq_client-* -maxdepth 2 -name ebin -print)
 PA = $(foreach EBIN,$(EBINS),-pa $(EBIN))
 
-ERLC_OPTS += -Werror +debug_info +warn_export_all $(PA)
+ERLC_OPTS += +debug_info +warn_export_all $(PA)
 ELIBS = $(ERL_LIBS):$(subst $(eval) ,:,$(wildcard $(ROOT)/deps/rabbitmq_client-*/deps))
 
 TEST_EBINS = $(shell find $(ROOT)/deps/mochiweb-* -maxdepth 2 -name ebin -print) \

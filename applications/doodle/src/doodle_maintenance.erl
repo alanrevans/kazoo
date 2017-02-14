@@ -24,7 +24,7 @@ flush() ->
 
 -spec start_check_sms_by_device_id(ne_binary(), ne_binary()) -> pid().
 start_check_sms_by_device_id(AccountId, DeviceId) ->
-    wh_util:spawn(?MODULE, 'check_sms_by_device_id', [AccountId, DeviceId]).
+        wh_util:spawn(?MODULE, 'check_sms_by_device_id', [AccountId, DeviceId]).
 
 -spec start_check_sms_by_owner_id(ne_binary(), ne_binary()) -> pid().
 start_check_sms_by_owner_id(AccountId, OwnerId) ->
@@ -121,7 +121,7 @@ replay_sms(AccountId, JObjs) ->
     lager:debug("starting sms offnet delivery for account ~s", [AccountId]),
     _ = [begin
              doodle_util:replay_sms(AccountId, wh_doc:id(JObj)),
-             timer:sleep(200)
+             timer:sleep(6000)
          end
          || JObj <- JObjs
         ],
@@ -154,3 +154,4 @@ send_outbound_sms(To, From, RouteId, Msg, Times) ->
      end
      || X <- lists:seq(1, wh_util:to_integer(Times))
     ].
+

@@ -287,6 +287,10 @@ route_resp_xml(<<"park">>, _Routes, JObj) ->
              ,route_resp_ringback(JObj)
              ,route_resp_transfer_ringback(JObj)
              ,route_resp_pre_park_action(JObj)
+             ,route_resp_jitter_disable_plc()
+             ,route_resp_jitter_enable()
+             ,route_resp_jitter_debug()
+             ,route_resp_jitter_enable_during_bridge()
              | route_resp_ccvs(JObj) ++ [action_el(<<"park">>)]
             ],
     ParkExtEl = extension_el(<<"park">>, 'undefined', [condition_el(Exten)]),
@@ -346,6 +350,18 @@ route_resp_xml(<<"sms_error">>, _Routes, JObj) ->
 route_resp_bridge_id() ->
     Action = action_el(<<"export">>, [?SET_CCV(<<"Bridge-ID">>, <<"${UUID}">>)]),
     condition_el(Action, ?GET_CCV(<<"Bridge-ID">>), <<"^$">>).
+
+route_resp_jitter_debug() ->
+    action_el(<<"jitterbuffer">>, <<"debug:off">>).
+
+route_resp_jitter_disable_plc() ->
+    action_el(<<"set">>, <<"rtp_jitter_buffer_plc=false">>).
+
+route_resp_jitter_enable() ->
+    action_el(<<"jitterbuffer">>, <<"150">>).
+
+route_resp_jitter_enable_during_bridge() ->
+    action_el(<<"set">>, <<"rtp_jitter_buffer_during_bridge=true">>).
 
 -spec not_found() -> {'ok', iolist()}.
 not_found() ->

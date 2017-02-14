@@ -393,6 +393,7 @@ route_req(CallId, FetchId, Props, Node) ->
      ,{<<"To">>, ecallmgr_util:get_sip_to(Props)}
      ,{<<"From">>, ecallmgr_util:get_sip_from(Props)}
      ,{<<"Request">>, ecallmgr_util:get_sip_request(Props)}
+     ,{<<"Content-Type">>, props:get_value(<<"type">>, Props) }
      ,{<<"Body">>, get_body(Props) }
      ,{<<"SIP-Request-Host">>, props:get_value(<<"variable_sip_req_host">>, Props)}
      ,{<<"Switch-Nodename">>, wh_util:to_binary(Node)}

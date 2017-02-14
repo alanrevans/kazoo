@@ -113,9 +113,9 @@ run(#doclet_gen{}=Cmd, Ctxt) ->
     %% dbg:p(all,[c]),
     gen(Cmd#doclet_gen.sources,
 	Cmd#doclet_gen.app,
-	Cmd#doclet_gen.packages,
+	undefined,
 	Cmd#doclet_gen.modules,
-	Cmd#doclet_gen.filemap,
+	undefined,
 	Ctxt);
 run(#doclet_toc{}=Cmd, Ctxt) ->
     toc(Cmd#doclet_toc.paths, Ctxt).

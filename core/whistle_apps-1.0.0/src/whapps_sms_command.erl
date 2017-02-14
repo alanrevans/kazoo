@@ -224,6 +224,7 @@ create_sms(Call) ->
                    ]),
     [{<<"Message-ID">>, whapps_call:kvs_fetch(<<"Message-ID">>, Call)}
      ,{<<"Call-ID">>, whapps_call:call_id(Call)}
+     ,{<<"Content-Type">>, whapps_call:kvs_fetch(<<"Content-Type">>, Call)}
      ,{<<"Body">>, whapps_call:kvs_fetch(<<"Body">>, Call)}
      ,{<<"From">>, whapps_call:from(Call)}
      ,{<<"Caller-ID-Number">>, whapps_call:caller_id_number(Call)}
@@ -261,7 +262,8 @@ create_sms_endpoint(Endpoint, <<"sip">>) ->
 -spec lookup_reg(ne_binary(), ne_binary()) -> {'error', any()} |
                                               {'ok', ne_binary()}.
 lookup_reg(Username, Realm) ->
-    Req = [{<<"Realm">>, Realm}
+    %% AlanE Req = [{<<"Realm">>, Realm}
+    Req = [{<<"Realm">>, <<"sip.altilink.ganx">>}
            ,{<<"Username">>, Username}
            ,{<<"Fields">>, [<<"Registrar-Node">>]}
            | wh_api:default_headers(?APP_NAME, ?APP_VERSION)
@@ -285,14 +287,14 @@ lookup_reg(Username, Realm) ->
 extract_device_registrations(JObjs) ->
     sets:to_list(extract_device_registrations(JObjs, sets:new())).
 
--spec extract_device_registrations(wh_json:objects(), set()) -> set().
+-spec extract_device_registrations(wh_json:objects(), sets:set()) -> sets:set().
 extract_device_registrations([], Set) -> Set;
 extract_device_registrations([JObj|JObjs], Set) ->
     Fields = wh_json:get_value(<<"Fields">>, JObj, []),
     S = lists:foldl(fun extract_device_registrar_fold/2, Set, Fields),
     extract_device_registrations(JObjs, S).
 
--spec extract_device_registrar_fold(wh_json:object(), set()) -> set().
+-spec extract_device_registrar_fold(wh_json:object(), sets:set()) -> sets:set().
 extract_device_registrar_fold(JObj, Set) ->
     case wh_json:get_ne_value(<<"Registrar-Node">>, JObj) of
         'undefined' -> Set;

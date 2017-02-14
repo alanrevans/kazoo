@@ -1,0 +1,19 @@
+%% -*- mode: Erlang; -*-
+
+{application, ss7_client,
+ [
+  {description, "A whapp that interfaces with KageSys SS7 GW via AMQP"},
+  {vsn, "0.0.1"},
+  {id, "ss7_client"},
+  {modules, [
+            ]},
+  {registered, [
+               ]},
+  {applications, [
+                  kernel,
+                  stdlib
+                 ]},
+  {env, []}
+ ]
+}.
+

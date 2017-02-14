@@ -214,8 +214,8 @@ packet(AppId, CallId, Transp, Packet) ->
                 MsgClass = case Class of
                     {req, Method, RUri} ->
                         case uris(RUri) of
-                            [RUri1] -> 
-                                [RUri1];
+                            [X] -> 
+                                 RUri1 = X;
                             _ -> RUri1 = 
                                 throw({invalid, <<"Request-URI">>})
                         end,
@@ -276,7 +276,7 @@ packet(AppId, #transport{proto=Proto}=Transp, Packet) ->
                 MsgClass = case Class of
                     {req, Method, RUri} ->
                         case uris(RUri) of
-                            [RUri1] -> [RUri1];
+                            [X] -> RUri1 = X;
                             _ -> RUri1 = throw({invalid, <<"Request-URI">>})
                         end,
                         {req, Method};
