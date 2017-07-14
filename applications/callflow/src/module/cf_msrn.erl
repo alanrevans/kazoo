@@ -57,26 +57,14 @@ bridge_to_endpoints(Data, Call) ->
     Endpoints = [{[{<<"Invite-Format">>,<<"username">>},
                  {<<"To-User">>, Imsi},
                  {<<"To-Username">>, Imsi},
-                 {<<"To-Realm">>, <<"sip.altilink.ganx">>},
-%%                 {<<"To-DID">>,<<"+4470000001">>},
+                 {<<"To-Realm">>, whapps_config:get(hlr, realm)},
                  {<<"SIP-Interface">>,<<"sofia/umainterface_1/">>},
-%%                 {<<"Callee-ID-Name">>,<<"Jean-Francois Gault2">>},
                  {<<"Callee-ID-Number">>, Msisdn},
-%%                 {<<"Outbound-Callee-ID-Name">>,<<"Jean-Francois Gault2">>},
                  {<<"Outbound-Callee-ID-Number">>, Msisdn},
                  {<<"Ignore-Early-Media">>,<<"true">>},
                  {<<"Endpoint-Timeout">>,<<"30">>},
-%%                 {<<"Endpoint-ID">>,<<"994d5941ecbf56dda7fe6cc252b530e8">>},
                  {<<"Codecs">>,[<<"AMR">>,<<"PCMA">>]}
-%%                 {<<"Presence-ID">>,<<"208220000000002@sip.altilink.ganx">>},
-%%                 {<<"Custom-Channel-Vars">>,
-%%                 {[{<<"SIP-Invite-Domain">>,<<"sip.altilink.ganx">>},
-%%                   {<<"Media-Encryption-Enforce-Security">>,false},
-%%                   {<<"Account-ID">>,<<"6ff4f0ab8bb5abd7c18d17cc65001312">>},
-%%                   {<<"Owner-ID">>,<<"6c4dcfca439ea4b624739571a4633c6c">>},
-%%                   {<<"Authorizing-ID">>,<<"994d5941ecbf56dda7fe6cc252b530e8">>}]}},
-%%                   {<<"Ignore-Completed-Elsewhere">>,true}
-                  ]}
+                ]}
                 ],
     %% Release the MSRN : Don't care too much if it fails
     spawn(ss7c_if, update_vlr, [<<"imsi">>, Imsi, <<"msrn">>, <<"undefined">>, rest]),

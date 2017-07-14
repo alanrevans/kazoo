@@ -362,10 +362,11 @@ try_quintuplets(RespJObj) ->
 publish_reg_success(Imsi, Props0) ->
    Host_name = props:get_value(<<"hostname">>, Props0),
    Realm = whapps_config:get(<<"hlr">>, <<"realm">>),
+   Fs_path =  whapps_config:get(<<"hlr">>, <<"fs_path">>, <<"sip:10.0.101.20:5060">>),
    Props = [
               {<<"First-Registration">>, <<"false">>}
              ,{<<"Expires">>,<<"3600">>}
-             ,{<<"Contact">>, <<"<sip:", Imsi/binary, "@", Host_name/binary, ":5060;transport=udp;fs_path=<sip:10.0.101.20:5060;lr;received='sip:", Host_name/binary, ":5060;transport=udp'>>">>}
+             ,{<<"Contact">>, <<"<sip:", Imsi/binary, "@", Host_name/binary, ":5060;transport=udp;fs_path=<", Fs_path, ";lr;received='sip:", Host_name/binary, ":5060;transport=udp'>>">>}
              ,{<<"Realm">>, Realm}
              ,{<<"Username">>, Imsi}
              ,{<<"From-User">>, Imsi}
@@ -398,9 +399,7 @@ rest_req(Url, Props0, Method, Body) when is_binary(Url) ->
     rest_req(binary_to_list(Url), Props, Method, Body);
 
 rest_req(Url, Props, Method, Body) ->
-    Proxy_host = binary_to_list(whapps_config:get(hlr, proxy_host, <<"proxy.altilink.ganx">>)),
-    Proxy_port = whapps_config:get_integer(hlr, proxy_port, 3128),
-    case ibrowse:send_req(Url, Props, Method, Body, [{proxy_host,Proxy_host},{proxy_port,Proxy_port}], 3000) of
+    case ibrowse:send_req(Url, Props, Method, Body, [], 3000) of
         {ok, "200", _, Resp} ->
             JObj = wh_json:decode(Resp),
             {ok, JObj};
