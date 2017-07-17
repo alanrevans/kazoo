@@ -263,7 +263,8 @@ create_sms_endpoint(Endpoint, <<"sip">>) ->
                                               {'ok', ne_binary()}.
 lookup_reg(Username, Realm) ->
     %% AlanE Req = [{<<"Realm">>, Realm}
-    Req = [{<<"Realm">>, <<"sip.altilink.ganx">>}
+    %% AlanE FIXME
+    Req = [{<<"Realm">>, <<"sip.airmont.net">>}
            ,{<<"Username">>, Username}
            ,{<<"Fields">>, [<<"Registrar-Node">>]}
            | wh_api:default_headers(?APP_NAME, ?APP_VERSION)
