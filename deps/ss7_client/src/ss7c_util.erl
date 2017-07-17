@@ -57,7 +57,7 @@
         }).
 
 -export([to_bit_string_format/1]).
--export([e164_to_bcd/1, imsi_to_bcd/1, from_bcd/1, display_id/1]).
+-export([to_bcd/1, e164_to_bcd/1, e164_to_bcd/2, imsi_to_bcd/1, from_bcd/1, display_id/1]).
 
 -export([get_triplet_list/2, get_triplet_list/3]).
 
@@ -93,6 +93,15 @@ imsi_to_bcd(Imsi)  when is_binary(Imsi) ->
 imsi_to_bcd(Imsi) when is_list(Imsi) ->
     to_bcd(Imsi).
     
+e164_to_bcd(unknown, <<"+", Number>>)  ->
+    e164_to_bcd(Number);
+e164_to_bcd(unknown, Number) ->
+    <<16#81, (to_bcd(Number))/binary>>;
+e164_to_bcd(international, <<"+", Number>>)  ->
+    e164_to_bcd(Number);
+e164_to_bcd(international, Number) when is_binary(Number) ->
+    e164_to_bcd(Number).
+    
 e164_to_bcd(E164) ->
     <<16#91, (to_bcd(E164))/binary>>.
     
@@ -119,11 +128,16 @@ to_bcd(V, Acc) ->
 from_bcd([16#91|V]) ->                  %% Convert 9144... to +44....
     from_bcd(list_to_binary(V), [$+]);
 
+from_bcd([16#81|V]) ->                  %% Handle unknown number ....
+    from_bcd(list_to_binary(V), []);
+
 from_bcd(V) when is_list(V) ->
     from_bcd(list_to_binary(V));
 
 from_bcd(<<16#91,V/binary>>) ->                 %% Convert 9144... to +44....
     from_bcd(V, [$+]);
+from_bcd(<<16#81,V/binary>>) ->                 %% Handle unknown number ....
+    from_bcd(V, []);
 
 from_bcd(V) when is_binary(V) ->
     from_bcd(V, []).
@@ -135,11 +149,24 @@ from_bcd(V, Acc) ->
     <<A:4, B:4, Rest/binary>> = V,
     case A of
         16#0F ->
-            from_bcd(Rest, Acc ++ [B+$0]);
+            from_bcd(Rest, Acc ++ [bcd(B)]);
         _ ->
-            from_bcd(Rest, Acc ++ [B+$0, A+$0])
+            from_bcd(Rest, Acc ++ [bcd(B), bcd(A)])
     end.
 
+bcd(X) when X >= 0, X =< 9 ->
+    X + $0;
+bcd(X) when X == 10 ->
+    $*;
+bcd(X) when X == 11 ->
+    $#;
+bcd(X) when X == 12 ->
+    $A;
+bcd(X) when X == 13 ->
+    $B;
+bcd(X) when X == 14 ->
+    $C.
+    
 get_triplet_list(Imsi, Count) ->
     get_triplet_list(Imsi, Count, amqp).
 

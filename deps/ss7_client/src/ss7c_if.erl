@@ -9,16 +9,22 @@
          imsi_detach/2,
          get_subscriber_info/2, 
          get_subscriber_info/3,
-         get_cf_info/2, 
+         get_cf_info/2,
+         get_cf_info/3,
          update_vlr/4,
          update_vlr/5,
          get_msisdn/1, 
          get_msisdn/2,
+         submit_sms/1,
          submit_sms/3, 
          submit_sms/4,
-         deliver_sms/3
+         deliver_sms/3,
 %%         deliver_sms/4
+         refresh_registration/1,
+         deregister/1
         ]).
+
+-include_lib("kernel/include/inet.hrl").
 
 -define(APP_NAME, <<"ss7c">>).
 -define(APP_VERSION, <<"0.0.1">>).
@@ -33,13 +39,14 @@ auth_info(Imsi, Count, Proto) ->
     Props = props:filter_undefined(
          [ 
             {<<"imsi">>, Imsi}
-           ,{<<"count">>, list_to_binary(integer_to_list(Count))}
            ,{<<"cmd">>, <<"auth_info">>}
+           ,{<<"hostname">>, list_to_binary(net_adm:localhost())}
           | wh_api:default_headers(<<"HLR">>, <<"auth_info">>, ?APP_NAME, ?APP_VERSION)
          ]),
     auth_info(Imsi, Count, Proto, Props).
 
-auth_info(Imsi, _Count, amqp, Props) ->
+auth_info(Imsi, Count, amqp, Props0) ->
+    Props = [{<<"count">>, Count}|Props0],
     case  wh_amqp_worker:call(Props
                               ,fun wapi_HLR:publish_auth_info_req/1
                               ,fun wapi_HLR:auth_info_resp_v/1
@@ -51,8 +58,8 @@ auth_info(Imsi, _Count, amqp, Props) ->
         {error, _} = Err -> Err;
         {timeout, _} -> {error, timeout}
     end;
-auth_info(Imsi, _Count, rest, Props0) ->
-    Props = Props0 ++ [{<<"Msg-ID">>,<<"hellodaddy">>}],
+auth_info(Imsi, Count, rest, Props0) ->
+    Props = Props0 ++ [{<<"count">>, list_to_binary(integer_to_list(Count))}, {<<"Msg-ID">>,<<"hellodaddy">>}],
     Url_prefix = whapps_config:get(hlr, url),
     Url_b = << Url_prefix/binary, $/, Imsi/binary, <<"/auth_info">>/binary>>,
     case rest_req(Url_b, Props, get) of
@@ -73,6 +80,7 @@ update_location(Imsi, VlrId, Proto) ->
                       ,{<<"vlrid">>, list_to_binary(pid_to_list(VlrId))}
                       ,{<<"cmd">>, <<"update_location">>}
                       ,{<<"hostname">>, list_to_binary(net_adm:localhost())}
+                      ,{<<"Expires">>,<<"10800">>}
                      | wh_api:default_headers(<<"HLR">>, <<"update_location">>, ?APP_NAME, ?APP_VERSION)
                     ]),
     update_location(Imsi, VlrId, Proto, Props).
@@ -84,24 +92,33 @@ update_location(Imsi, VlrId, amqp, Props) ->
                               ,5000
                              ) of
         {ok, RespJObj} -> 
-            ok = check_response(RespJObj);
+            ok = check_response(RespJObj),
+            publish_reg_success(Props, RespJObj),
+            {ok, RespJObj};
         {error, _} = Err -> Err;
         {timeout, _} -> {error, timeout}
     end;
 update_location(Imsi, _VlrId, rest, Props0) ->
-    Props = Props0 ++ [{<<"Msg-ID">>,<<"hellodaddy">>}],
+    Props = Props0 ++ [{<<"Msg-ID">>,<<"hellodaddy">>}                      ],
     Url_prefix = whapps_config:get(hlr, url),
     Url_b = << Url_prefix/binary, $/, Imsi/binary, <<"/update_location">>/binary>>,
     case rest_req(Url_b, Props, put) of
     {ok, RespJObj} ->
             ok = check_response(RespJObj),
-            publish_reg_success(Imsi, Props);
+            publish_reg_success(Props, RespJObj),
+            {ok, RespJObj};
         {error, _} = Err -> Err;
         {timeout, _} -> {error, timeout}
     end.
 
 get_cf_info(Imsi, Cause) ->
+    get_cf_info(Imsi, Cause, amqp).
+
+get_cf_info(Imsi, Cause, Proto) ->
     Props = [{<<"imsi">>, Imsi}, {<<"cause">>, Cause}],
+    get_cf_info(Imsi, Cause, Proto, Props).
+
+get_cf_info(_Imsi, _Cause, amqp, Props) ->
     case wh_amqp_worker:call(Props
                               ,fun wapi_HLR:publish_get_cf_info_req/1
                               ,fun wapi_HLR:get_cf_info_resp_v/1
@@ -113,6 +130,18 @@ get_cf_info(Imsi, Cause) ->
                 Ftn -> {ok, Ftn}
             end;
         {error, _}  = Err -> Err
+    end;
+get_cf_info(Imsi, _Cause, rest, Props0) ->
+    Props = Props0 ++ [{<<"Msg-ID">>,<<"hellodaddy">>}
+                      ],
+    Url_prefix = whapps_config:get(vlr, url),
+    Url_b = << Url_prefix/binary, $/, Imsi/binary, <<"/get_cf_info">>/binary>>,
+    case rest_req(Url_b, Props, get) of
+    {ok, RespJObj} ->
+            ok = check_response(RespJObj),
+            {ok, RespJObj};
+        {error, _} = Err -> Err;
+        {timeout, _} -> {error, timeout}
     end.
 
 imsi_detach(Imsi) ->
@@ -120,7 +149,8 @@ imsi_detach(Imsi) ->
     
 imsi_detach(Imsi, Proto) ->
     Props = [{<<"imsi">>, Imsi}],
-    imsi_detach(Imsi, Proto, Props).
+    imsi_detach(Imsi, Proto, Props),
+    deregister(Imsi).
 
 imsi_detach(Imsi, amqp, Props) ->
     case wh_amqp_worker:call(Props
@@ -224,7 +254,9 @@ get_subscriber_info(Id_type, Id, rest, Props0) ->
             ok = check_response(RespJObj),
             Info = [{<<"msisdn">>, wh_json:get_ne_value(<<"msisdn">>, RespJObj)},
                     {<<"imsi">>,   wh_json:get_ne_value(<<"imsi">>, RespJObj)},
-                    {<<"isd">>,    wh_json:get_ne_value(<<"subscriber_info">>, RespJObj)}],
+                    {<<"vlr">>,   wh_json:get_ne_value(<<"vlr">>, RespJObj)},
+                    {<<"account_id">>,   wh_json:get_ne_value(<<"account_id">>, RespJObj)},
+                    {<<"isd">>,    wh_json:get_ne_value(<<"isd">>, RespJObj)}],
             {ok, Info};
         {error, _} = Err -> Err;
         {timeout, _} -> {error, timeout}
@@ -265,6 +297,17 @@ update_vlr(Id_type, Id, Attribute, Value, rest, Props0) ->
         {timeout, _} -> {error, timeout}
     end.
 
+submit_sms(Props) when is_list(Props) ->
+    lager:debug("submit_sms received MO SMS"),
+    From =  props:get_value(<<"from">>, Props),
+    To =  props:get_value(<<"to">>, Props),
+    Proto =  props:get_value(<<"proto">>, Props, rest),
+    Type = props:get_value(<<"type">>, Props, text),
+    [Imsi, _Realm] = binary:split(From, <<"@">>),
+    TpUserData =  props:get_value(<<"body">>, Props),
+    SmsSubmit = ss7c_sms_encoding:build_sms_submit(To, TpUserData, Type),         %% AlanE: FIXME need to handle national/international numbers
+    submit_sms(Imsi, <<"+33644402000">>, binary_to_list(SmsSubmit), Proto).
+
 submit_sms(Imsi, SmsMsc, SmsMsg) ->
     submit_sms(Imsi, SmsMsc, SmsMsg, amqp).
     
@@ -272,29 +315,40 @@ submit_sms(Imsi, SmsMsc, SmsMsg, Proto) ->
     Props = [{<<"imsi">>, Imsi},{<<"smsmsc">>, SmsMsc}, {<<"smsmsg">>, SmsMsg}],
     submit_sms(Imsi, SmsMsc, SmsMsg, Proto, Props).
 
-submit_sms(Imsi, SmsMsc, SmsMsg, amqp, Props) ->
+submit_sms(Imsi, _SmsMsc, _SmsMsg, amqp, Props) ->
     case wh_amqp_worker:call(Props
                               ,fun wapi_HLR:publish_submit_sms_req/1
                               ,fun wapi_HLR:submit_sms_resp_v/1
                               ,5000
                              ) of
         {ok, RespJObj} ->
-            check_success(RespJObj);
+            ok = check_response(RespJObj),
+            {ok, RespJObj};
         {error, _} = Err -> Err;
         {timeout, _} -> {error, timeout}
     end;
-submit_sms(Imsi, SmsMsc, SmsMsg, rest, Props0) ->
-    Props = Props0 ++ [{<<"Msg-ID">>,<<"hellodaddy">>}],
+submit_sms(Imsi, _SmsMsc, _SmsMsg, rest, Props0) ->
+    Props1 = Props0 ++ [{<<"Msg-ID">>,<<"hellodaddy">>}],
+    Props = props:delete(<<"smsmsg">>, Props1),
     Url_prefix = whapps_config:get(hlr, url),
     Url_b = << Url_prefix/binary, $/, Imsi/binary, <<"/submit_sms">>/binary>>,
-    case rest_req(Url_b, Props, put) of
+    Body = wh_json:encode(wh_json:from_list(Props1)),
+    case rest_req(Url_b, Props, put, Body) of
         {ok, RespJObj} ->
-            check_success(RespJObj);
+            ok = check_response(RespJObj),
+            {ok, RespJObj};
         {error, _} = Err -> Err;
         {timeout, _} -> {error, timeout}
     end.
+
+deliver_sms(Imsi, SmsMsc, SmsMsg) ->
+    deliver_sms(Imsi, SmsMsc, SmsMsg, amqp).
+    
+deliver_sms(Imsi, SmsMsc, SmsMsg, Proto) ->
+    Props = [{<<"imsi">>, Imsi},{<<"smsmsc">>, SmsMsc}, {<<"smsmsg">>, SmsMsg}],
+    deliver_sms(Imsi, SmsMsc, SmsMsg, Proto, Props).
   
-deliver_sms(Msisdn, SmsMsc, SmsMsg) ->
+deliver_sms(Msisdn, SmsMsc, SmsMsg, amqp, Props) ->
     Props = [{<<"msisdn">>, Msisdn},{<<"smsmsc">>, SmsMsc}, {<<"smsmsg">>, SmsMsg}],
     case wh_amqp_worker:call(Props
                               ,fun wapi_HLR:publish_deliver_sms_req/1
@@ -307,8 +361,20 @@ deliver_sms(Msisdn, SmsMsc, SmsMsg) ->
                 Else -> {error, Else}
             end;
         {error, _} = Err -> Err
+    end;
+deliver_sms(To_msisdn, _SmsMsc, _SmsMsg, rest, Props0) ->
+    Props1 = Props0 ++ [{<<"Msg-ID">>,<<"hellodaddy">>}],
+    Props = props:delete(<<"smsmsg">>, Props1),
+    Url_prefix = whapps_config:get(hlr, url),
+    Url_b = << Url_prefix/binary, $/, To_msisdn/binary, <<"/deliver_sms">>/binary>>,
+    Body = wh_json:encode(wh_json:from_list(Props1)),
+    case rest_req(Url_b, Props, put, Body) of
+        {ok, RespJObj} ->
+            ok = check_response(RespJObj),
+            {ok, RespJObj};
+        {error, _} = Err -> Err;
+        {timeout, _} -> {error, timeout}
     end.
-
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 get_msisdn_is_success([JObj|_]) -> get_msisdn_is_success(JObj);
@@ -359,34 +425,76 @@ try_quintuplets(RespJObj) ->
     
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-publish_reg_success(Imsi, Props0) ->
-   Host_name = props:get_value(<<"hostname">>, Props0),
-   Realm = whapps_config:get(<<"hlr">>, <<"realm">>),
-   Fs_path =  whapps_config:get(<<"hlr">>, <<"fs_path">>, <<"sip:10.0.101.20:5060">>),
-   Props = [
-              {<<"First-Registration">>, <<"false">>}
-             ,{<<"Expires">>,<<"3600">>}
-             ,{<<"Contact">>, <<"<sip:", Imsi/binary, "@", Host_name/binary, ":5060;transport=udp;fs_path=<", Fs_path, ";lr;received='sip:", Host_name/binary, ":5060;transport=udp'>>">>}
-             ,{<<"Realm">>, Realm}
-             ,{<<"Username">>, Imsi}
-             ,{<<"From-User">>, Imsi}
-             ,{<<"From-Host">>, Realm}
-             ,{<<"To-User">>, Imsi}
-             ,{<<"To-Host">>, Realm}
-             ,{<<"User-Agent">>, <<"ganx_proxy">>}
-           ],
-   Req = lists:foldl(fun(K, Acc) ->
-                             case props:get_first_defined([wh_util:to_lower_binary(K), K], Props) of
-                                 'undefined' -> Acc;
-                                 V -> [{K, V} | Acc]
-                             end
-                     end
-                     ,[{<<"Event-Timestamp">>, round(wh_util:current_tstamp())}
-                       | wh_api:default_headers(?APP_NAME, ?APP_VERSION)
-                      ]
-                     ,wapi_registration:success_keys()),
-   wh_amqp_worker:cast(Req, fun wapi_registration:publish_success/1).
+refresh_registration(Imsi) ->
+    Props = [
+                {<<"imsi">>, Imsi}
+                ,{<<"hostname">>, list_to_binary(net_adm:localhost())}
+                ,{<<"Expires">>,<<"10800">>}
 
+            ],
+    publish_reg_success(Props, wh_json:from_list(Props)).
+
+deregister(Imsi) ->
+          Props = [
+                      {<<"imsi">>, Imsi}
+                      ,{<<"hostname">>, list_to_binary(net_adm:localhost())}
+                      ,{<<"Expires">>,<<"0">>}
+      
+                  ],
+          publish_reg_success(Props, wh_json:from_list(Props)).
+      
+publish_reg_success(Props0, JObj) ->
+    Imsi = props:get_value(<<"imsi">>, Props0), 
+    Host_name = props:get_value(<<"hostname">>, Props0),
+    Expires = props:get_value(<<"Expires">>, Props0),
+    Realm = whapps_config:get(<<"hlr">>, <<"realm">>),
+    Fs_path = fs_path(),
+    Props = [
+               {<<"First-Registration">>, <<"false">>}
+               ,{<<"Expires">>, Expires}
+              ,{<<"Contact">>, <<"<sip:", Imsi/binary, "@", Host_name/binary, ";transport=udp;fs_path=", Fs_path/binary, ";lr;received='sip:", Host_name/binary, ":5060;transport=udp'>">>}
+              ,{<<"Realm">>, Realm}
+              ,{<<"Username">>, Imsi}
+              ,{<<"From-User">>, Imsi}
+              ,{<<"From-Host">>, Realm}
+              ,{<<"To-User">>, Imsi}
+              ,{<<"To-Host">>, Realm}
+              ,{<<"User-Agent">>, <<"ganx_proxy">>}
+%%              ,{<<"Registrar-Node">>, <<"kamailio@1a-kazoo.altilink.ganx">>}
+              ,{<<"Registrar-Node">>, registrar_node()} 
+            ],
+    Req = lists:foldl(fun(K, Acc) ->
+                              case props:get_first_defined([wh_util:to_lower_binary(K), K], Props) of
+                                  'undefined' -> Acc;
+                                  V -> [{K, V} | Acc]
+                              end
+                      end
+                      ,[{<<"Event-Timestamp">>, round(wh_util:current_tstamp())}
+                        | wh_api:default_headers(?APP_NAME, ?APP_VERSION)
+                       ]
+                      ,wapi_registration:success_keys()),
+    wh_amqp_worker:cast(Req, fun wapi_registration:publish_success/1),
+    
+    Account_id = case couch_mgr:get_results(<<"accounts">>, <<"accounts/listing_by_realm">>, [{key, Realm}]) of
+        {ok, [JObj1]} ->
+            wh_json:get_ne_value([<<"value">>, <<"account_id">>], JObj1);
+        _ -> undefined
+    end,
+    update_vlr(<<"imsi">>, Imsi, <<"account_id">>, Account_id, rest).
+
+registrar_node() ->
+    list_to_binary(atom_to_list(node())).
+
+fs_path() ->
+    case whapps_config:get_atom(ganx, sipc_fqdn) of
+        undefined -> 
+            throw(undefined_sipc_fqdn);
+        Sipc_fqdn ->
+            {ok, #hostent{h_addr_list = [Sipc_ip]}}  = inet:gethostbyname(Sipc_fqdn),
+            Sipc_addr = inet:ntoa(Sipc_ip),
+            <<"sip:",  (list_to_binary(Sipc_addr))/binary, ":5060">>
+    end.
+    
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 rest_req(Url, Props, put) ->
     Body = wh_json:encode(wh_json:from_list(Props)),
@@ -399,7 +507,16 @@ rest_req(Url, Props0, Method, Body) when is_binary(Url) ->
     rest_req(binary_to_list(Url), Props, Method, Body);
 
 rest_req(Url, Props, Method, Body) ->
-    case ibrowse:send_req(Url, Props, Method, Body, [], 3000) of
+    Use_proxy = whapps_config:get(hlr, use_proxy, true),
+    Opts = 
+    case Use_proxy of
+	false -> [];
+        true ->
+            Proxy_host = binary_to_list(whapps_config:get(hlr, proxy_host)),
+            Proxy_port = whapps_config:get_integer(hlr, proxy_port, 3128),
+            [{proxy_host,Proxy_host},{proxy_port,Proxy_port}]
+    end,
+    case ibrowse:send_req(Url, Props, Method, Body, Opts, 3000) of
         {ok, "200", _, Resp} ->
             JObj = wh_json:decode(Resp),
             {ok, JObj};

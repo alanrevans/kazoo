@@ -41,7 +41,7 @@
 
 %% GET_SUBSCRIBER_INFO Responses
 -define(GET_SUBSCRIBER_INFO_RESP_HEADERS, [<<"result">>]).
--define(OPTIONAL_GET_SUBSCRIBER_INFO_RESP_HEADERS, [<<"msisdn">>,<<"imsi">>,<<"subscriber_info">>,<<"cause">>]).
+-define(OPTIONAL_GET_SUBSCRIBER_INFO_RESP_HEADERS, [<<"msisdn">>,<<"imsi">>,<<"vlr">>,<<"account_id">>,<<"subscriber_info">>,<<"isd">>,<<"cause">>]).
 -define(GET_SUBSCRIBER_INFO_RESP_VALUES, [{<<"Event-Category">>, ?EVENT_CATEGORY}
                                ,{<<"Event-Name">>, <<"get_subscriber_info">>}
                                ,{<<"result">>, [<<"success">>,<<"fail">>]}
@@ -56,7 +56,7 @@
 -define(UPDATE_VLR_REQ_VALUES, [{<<"Event-Category">>, ?EVENT_CATEGORY}
                               ,{<<"Event-Name">>, <<"update_vlr">>}
                               ,{<<"id_type">>, [<<"imsi">>]}
-                              ,{<<"attribute">>, [<<"msrn">>]}
+                              ,{<<"attribute">>, [<<"msrn">>,<<"account_id">>]}
                               ]).
 -define(UPDATE_VLR_REQ_TYPES, [{<<"cmd">>, fun is_binary/1}
                              ,{<<"id_type">>, fun is_binary/1}
