@@ -1,1 +1,66 @@
-{"type":"object","required":["Account-ID","Agent-ID","Change","Queue-ID"],"properties":{"Skills":{"type":"string"},"Queue-ID":{"type":"string"},"Process-ID":{"type":"string"},"Priority":{"type":"string"},"Event-Name":{"enum":["agent_change"]},"Event-Category":{"enum":["queue"]},"Change":{"type":"string","enum":["available","busy","ringing","unavailable"]},"Caller-ID-Number":{"type":"string"},"Caller-ID-Name":{"type":"string"},"Callee-ID-Number":{"type":"string"},"Callee-ID-Name":{"type":"string"},"Call-Direction":{"type":"string"},"Agent-ID":{"type":"string"},"Account-ID":{"type":"string"}},"description":"AMQP API for acdc_queue.agent_change","_id":"kapi.acdc_queue.agent_change","$schema":"http://json-schema.org/draft-04/schema#"}
+{
+    "$schema": "http://json-schema.org/draft-04/schema#",
+    "_id": "kapi.acdc_queue.agent_change",
+    "description": "AMQP API for acdc_queue.agent_change",
+    "properties": {
+        "Account-ID": {
+            "type": "string"
+        },
+        "Agent-ID": {
+            "type": "string"
+        },
+        "Call-Direction": {
+            "type": "string"
+        },
+        "Callee-ID-Name": {
+            "type": "string"
+        },
+        "Callee-ID-Number": {
+            "type": "string"
+        },
+        "Caller-ID-Name": {
+            "type": "string"
+        },
+        "Caller-ID-Number": {
+            "type": "string"
+        },
+        "Change": {
+            "enum": [
+                "available",
+                "busy",
+                "ringing",
+                "unavailable"
+            ],
+            "type": "string"
+        },
+        "Event-Category": {
+            "enum": [
+                "queue"
+            ]
+        },
+        "Event-Name": {
+            "enum": [
+                "agent_change"
+            ]
+        },
+        "Priority": {
+            "type": "string"
+        },
+        "Process-ID": {
+            "type": "string"
+        },
+        "Queue-ID": {
+            "type": "string"
+        },
+        "Skills": {
+            "type": "string"
+        }
+    },
+    "required": [
+        "Account-ID",
+        "Agent-ID",
+        "Change",
+        "Queue-ID"
+    ],
+    "type": "object"
+}

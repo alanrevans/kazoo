@@ -3,6 +3,10 @@
 %%% @doc
 %%% @author James Aimonetti
 %%% @author Daniel Finke
+%%% This Source Code Form is subject to the terms of the Mozilla Public
+%%% License, v. 2.0. If a copy of the MPL was not distributed with this
+%%% file, You can obtain one at https://mozilla.org/MPL/2.0/.
+%%%
 %%% @end
 %%%-----------------------------------------------------------------------------
 -module(acdc_agents_sup).
@@ -120,7 +124,7 @@ find_agent_supervisor(_AccountId, _AgentId, []) ->
     lager:debug("ran out of supers"),
     'undefined';
 find_agent_supervisor(AccountId, AgentId, _) when AccountId =:= 'undefined';
-                                               AgentId =:= 'undefined' ->
+                                                  AgentId =:= 'undefined' ->
     lager:debug("failed to get good data: ~s ~s", [AccountId, AgentId]),
     'undefined';
 find_agent_supervisor(AccountId, AgentId, [Super|Rest]) ->

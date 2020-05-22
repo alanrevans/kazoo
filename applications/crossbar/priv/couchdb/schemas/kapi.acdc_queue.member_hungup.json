@@ -1,1 +1,27 @@
-{"type":"object","required":["Call-ID"],"properties":{"Process-ID":{"type":"string"},"Event-Name":{"enum":["hungup"]},"Event-Category":{"enum":["member"]},"Call-ID":{"type":"string"}},"description":"AMQP API for acdc_queue.member_hungup","_id":"kapi.acdc_queue.member_hungup","$schema":"http://json-schema.org/draft-04/schema#"}
+{
+    "$schema": "http://json-schema.org/draft-04/schema#",
+    "_id": "kapi.acdc_queue.member_hungup",
+    "description": "AMQP API for acdc_queue.member_hungup",
+    "properties": {
+        "Call-ID": {
+            "type": "string"
+        },
+        "Event-Category": {
+            "enum": [
+                "member"
+            ]
+        },
+        "Event-Name": {
+            "enum": [
+                "hungup"
+            ]
+        },
+        "Process-ID": {
+            "type": "string"
+        }
+    },
+    "required": [
+        "Call-ID"
+    ],
+    "type": "object"
+}

@@ -1,1 +1,34 @@
-{"type":"object","required":["Account-ID","Agent-ID"],"properties":{"Member-Call-ID":{"type":"string"},"Event-Name":{"enum":["shared_call_id"]},"Event-Category":{"enum":["agent"]},"Agent-ID":{"type":"string"},"Agent-Call-ID":{"type":"string"},"Account-ID":{"type":"string"}},"description":"AMQP API for acdc_agent.shared_call_id","_id":"kapi.acdc_agent.shared_call_id","$schema":"http://json-schema.org/draft-04/schema#"}
+{
+    "$schema": "http://json-schema.org/draft-04/schema#",
+    "_id": "kapi.acdc_agent.shared_call_id",
+    "description": "AMQP API for acdc_agent.shared_call_id",
+    "properties": {
+        "Account-ID": {
+            "type": "string"
+        },
+        "Agent-Call-ID": {
+            "type": "string"
+        },
+        "Agent-ID": {
+            "type": "string"
+        },
+        "Event-Category": {
+            "enum": [
+                "agent"
+            ]
+        },
+        "Event-Name": {
+            "enum": [
+                "shared_call_id"
+            ]
+        },
+        "Member-Call-ID": {
+            "type": "string"
+        }
+    },
+    "required": [
+        "Account-ID",
+        "Agent-ID"
+    ],
+    "type": "object"
+}

@@ -1,1 +1,30 @@
-{"type":"object","required":["Agent-ID"],"properties":{"Process-ID":{"type":"string"},"Idle-Time":{"type":"integer"},"Event-Name":{"enum":["connect_resp"]},"Event-Category":{"enum":["member"]},"Agent-ID":{"type":"string"}},"description":"AMQP API for acdc_queue.member_connect_resp","_id":"kapi.acdc_queue.member_connect_resp","$schema":"http://json-schema.org/draft-04/schema#"}
+{
+    "$schema": "http://json-schema.org/draft-04/schema#",
+    "_id": "kapi.acdc_queue.member_connect_resp",
+    "description": "AMQP API for acdc_queue.member_connect_resp",
+    "properties": {
+        "Agent-ID": {
+            "type": "string"
+        },
+        "Event-Category": {
+            "enum": [
+                "member"
+            ]
+        },
+        "Event-Name": {
+            "enum": [
+                "connect_resp"
+            ]
+        },
+        "Idle-Time": {
+            "type": "integer"
+        },
+        "Process-ID": {
+            "type": "string"
+        }
+    },
+    "required": [
+        "Agent-ID"
+    ],
+    "type": "object"
+}

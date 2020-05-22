@@ -1,1 +1,39 @@
-{"type":"object","required":["Account-ID","Queue-ID"],"properties":{"Window":{"type":"integer"},"Skills":{"type":"array","items":{"type":"string"}},"Queue-ID":{"type":"string","minLength":1},"Event-Name":{"enum":["average_wait_time_req"]},"Event-Category":{"enum":["acdc_stat"]},"Account-ID":{"type":"string","minLength":1}},"description":"AMQP API for acdc_stats.average_wait_time_req","_id":"kapi.acdc_stats.average_wait_time_req","$schema":"http://json-schema.org/draft-04/schema#"}
+{
+    "$schema": "http://json-schema.org/draft-04/schema#",
+    "_id": "kapi.acdc_stats.average_wait_time_req",
+    "description": "AMQP API for acdc_stats.average_wait_time_req",
+    "properties": {
+        "Account-ID": {
+            "minLength": 1,
+            "type": "string"
+        },
+        "Event-Category": {
+            "enum": [
+                "acdc_stat"
+            ]
+        },
+        "Event-Name": {
+            "enum": [
+                "average_wait_time_req"
+            ]
+        },
+        "Queue-ID": {
+            "minLength": 1,
+            "type": "string"
+        },
+        "Skills": {
+            "items": {
+                "type": "string"
+            },
+            "type": "array"
+        },
+        "Window": {
+            "type": "integer"
+        }
+    },
+    "required": [
+        "Account-ID",
+        "Queue-ID"
+    ],
+    "type": "object"
+}

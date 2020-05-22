@@ -1,1 +1,48 @@
-{"type":"object","required":["Account-ID","Agent-ID"],"properties":{"Time-Limit":{"type":"integer"},"Queue-ID":{"type":"string"},"Presence-State":{"type":"string","enum":["confirmed","early","offline","online","terminated","trying"]},"Presence-ID":{"type":"string"},"Event-Name":{"enum":["resume"]},"Event-Category":{"enum":["agent"]},"Agent-ID":{"type":"string"},"Account-ID":{"type":"string"}},"description":"AMQP API for acdc_agent.resume","_id":"kapi.acdc_agent.resume","$schema":"http://json-schema.org/draft-04/schema#"}
+{
+    "$schema": "http://json-schema.org/draft-04/schema#",
+    "_id": "kapi.acdc_agent.resume",
+    "description": "AMQP API for acdc_agent.resume",
+    "properties": {
+        "Account-ID": {
+            "type": "string"
+        },
+        "Agent-ID": {
+            "type": "string"
+        },
+        "Event-Category": {
+            "enum": [
+                "agent"
+            ]
+        },
+        "Event-Name": {
+            "enum": [
+                "resume"
+            ]
+        },
+        "Presence-ID": {
+            "type": "string"
+        },
+        "Presence-State": {
+            "enum": [
+                "confirmed",
+                "early",
+                "offline",
+                "online",
+                "terminated",
+                "trying"
+            ],
+            "type": "string"
+        },
+        "Queue-ID": {
+            "type": "string"
+        },
+        "Time-Limit": {
+            "type": "integer"
+        }
+    },
+    "required": [
+        "Account-ID",
+        "Agent-ID"
+    ],
+    "type": "object"
+}

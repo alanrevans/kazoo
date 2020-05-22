@@ -4,6 +4,10 @@
 %%% @author James Aimonetti
 %%%
 %%% @author James Aimonetti
+%%% This Source Code Form is subject to the terms of the Mozilla Public
+%%% License, v. 2.0. If a copy of the MPL was not distributed with this
+%%% file, You can obtain one at https://mozilla.org/MPL/2.0/.
+%%%
 %%% @end
 %%%-----------------------------------------------------------------------------
 -module(acdc_queue_fsm).
@@ -78,7 +82,7 @@
                ,member_call_start :: kz_term:api_non_neg_integer()
                ,member_call_winners :: [kz_term:api_object()] %% list of who won the call
 
-                                      %% Config options
+                                       %% Config options
                ,name :: kz_term:ne_binary()
                ,connection_timeout :: pos_integer()
                ,agent_ring_timeout = 10 :: pos_integer() % how long to ring an agent before giving up
@@ -473,10 +477,10 @@ connecting({'member_call_cancel', JObj}, #state{queue_proc=Srv
             webseq:evt(?WSD_ID, self(), CallId, <<"member call finish - DTMF">>),
 
             lists:foreach(fun(Winner) ->
-                lager:debug("sending timeout agent  to ~s(~s)", [kz_json:get_value(<<"Agent-ID">>, Winner) ,kz_json:get_value(<<"Process-ID">>, Winner) ]),
-                acdc_queue_listener:timeout_agent(Srv, Winner)
-                end,
-                Winners),
+                                  lager:debug("sending timeout agent  to ~s(~s)", [kz_json:get_value(<<"Agent-ID">>, Winner) ,kz_json:get_value(<<"Process-ID">>, Winner) ]),
+                                  acdc_queue_listener:timeout_agent(Srv, Winner)
+                          end,
+                          Winners),
             acdc_queue_listener:exit_member_call(Srv),
             acdc_stats:call_abandoned(AccountId, QueueId, CallId, ?ABANDON_EXIT),
             {'next_state', 'ready', clear_member_call(State), 'hibernate'};
@@ -501,7 +505,7 @@ connecting({'accepted', AcceptJObj}, #state{queue_proc=Srv
             webseq:evt(?WSD_ID, self(), CallId, <<"member call - agent acceptance">>),
 
             lists:foreach(fun(Win) -> acdc_queue_listener:member_connect_satisfied(Srv, kz_json:set_value(<<"Accept-Agent-ID">>, AcceptAgentID, Win), []) end, Wins),
-%%            lists:foreach(fun(Win) -> acdc_queue_listener:member_connect_satisfied(Srv, Win, []) end, Wins),
+            %%            lists:foreach(fun(Win) -> acdc_queue_listener:member_connect_satisfied(Srv, Win, []) end, Wins),
 
             acdc_queue_listener:finish_member_call(Srv, AcceptJObj),
             case kz_json:get_value(<<"Old-Call-ID">>, AcceptJObj) of
@@ -549,11 +553,12 @@ connecting({'retry', RetryJObj}, #state{agent_ring_timer_ref=AgentRef
     RetryProcId = kz_json:get_value(<<"Process-ID">>, RetryJObj),
     RetryAgentId = kz_json:get_value(<<"Agent-ID">>, RetryJObj),
 
-    NewWinners = 
-    lists:filter(fun(Winner) ->
-                RetryAgentId =/= kz_json:get_value(<<"Agent-ID">>, Winner) andalso RetryProcId =/=  kz_json:get_value(<<"Process-ID">>, Winner)
-                end,
-                Winners),
+    NewWinners =
+        lists:filter(fun(Winner) ->
+                             RetryAgentId =/= kz_json:get_value(<<"Agent-ID">>, Winner)
+                                 andalso RetryProcId =/=  kz_json:get_value(<<"Process-ID">>, Winner)
+                     end,
+                     Winners),
 
     case NewWinners of
         [] ->
@@ -579,10 +584,10 @@ connecting({'timeout', AgentRef, ?AGENT_RING_TIMEOUT_MESSAGE}, #state{agent_ring
     gen_fsm:send_event(self(), {'timeout', 'undefined', ?COLLECT_RESP_MESSAGE}),
 
     lists:foreach(fun(Winner) ->
-        lager:debug("sending timeout agent  to ~s(~s)", [kz_json:get_value(<<"Agent-ID">>, Winner) ,kz_json:get_value(<<"Process-ID">>, Winner) ]),
-        acdc_queue_listener:timeout_agent(Srv, Winner)
-        end,
-        Winners),
+                          lager:debug("sending timeout agent  to ~s(~s)", [kz_json:get_value(<<"Agent-ID">>, Winner) ,kz_json:get_value(<<"Process-ID">>, Winner) ]),
+                          acdc_queue_listener:timeout_agent(Srv, Winner)
+                  end,
+                  Winners),
     {'next_state', 'connect_req', State#state{agent_ring_timer_ref='undefined'
                                              ,member_call_winners='undefined'
                                              }};
@@ -625,10 +630,10 @@ connecting({'timeout', ConnRef, ?CONNECTION_TIMEOUT_MESSAGE}, #state{queue_proc=
     lager:debug("connection timeout occurred, bounce the caller out of the queue"),
 
     lists:foreach(fun(Winner) ->
-        lager:debug("maybe sending timeout agent  to ~s(~s)", [kz_json:get_value(<<"Agent-ID">>, Winner) ,kz_json:get_value(<<"Process-ID">>, Winner) ]),
-        maybe_timeout_winner(Srv, Winner)
-        end,
-        Winners),
+                          lager:debug("maybe sending timeout agent  to ~s(~s)", [kz_json:get_value(<<"Agent-ID">>, Winner) ,kz_json:get_value(<<"Process-ID">>, Winner) ]),
+                          maybe_timeout_winner(Srv, Winner)
+                  end,
+                  Winners),
 
     CallId = kapps_call:call_id(Call),
     acdc_stats:call_abandoned(AccountId, QueueId, CallId, ?ABANDON_TIMEOUT),
@@ -647,10 +652,10 @@ connecting({'register_callback', JObj}, #state{queue_proc=Srv
     gen_fsm:send_event(self(), {'timeout', 'undefined', ?COLLECT_RESP_MESSAGE}),
     maybe_stop_timer(AgentRef),
     lists:foreach(fun(Winner) ->
-        lager:debug("sending timeout agent  to ~s(~s)", [kz_json:get_value(<<"Agent-ID">>, Winner) ,kz_json:get_value(<<"Process-ID">>, Winner) ]),
-        acdc_queue_listener:timeout_agent(Srv, Winner)
-        end,
-        Winners),
+                          lager:debug("sending timeout agent  to ~s(~s)", [kz_json:get_value(<<"Agent-ID">>, Winner) ,kz_json:get_value(<<"Process-ID">>, Winner) ]),
+                          acdc_queue_listener:timeout_agent(Srv, Winner)
+                  end,
+                  Winners),
 
     {'next_state', 'connect_req', State#state{connection_timer_ref='undefined'
                                              ,agent_ring_timer_ref='undefined'
@@ -712,7 +717,7 @@ handle_event(_Event, StateName, State) ->
 %% @end
 %%------------------------------------------------------------------------------
 -spec handle_sync_event(any(), {pid(),any()}, atom(), state()) ->
-                               kz_term:handle_sync_event_ret(state()).
+          kz_term:handle_sync_event_ret(state()).
 handle_sync_event('cdr_url', _, StateName, #state{cdr_url=Url}=State) ->
     {'reply', Url, StateName, State};
 handle_sync_event(_Event, _From, StateName, State) ->

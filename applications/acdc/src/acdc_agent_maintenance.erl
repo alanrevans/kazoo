@@ -2,6 +2,10 @@
 %%% @copyright (C) 2013-2020, 2600Hz
 %%% @doc
 %%% @author James Aimonetti
+%%% This Source Code Form is subject to the terms of the Mozilla Public
+%%% License, v. 2.0. If a copy of the MPL was not distributed with this
+%%% file, You can obtain one at https://mozilla.org/MPL/2.0/.
+%%%
 %%% @end
 %%%-----------------------------------------------------------------------------
 -module(acdc_agent_maintenance).
@@ -33,7 +37,7 @@ acct_status(AccountId) ->
 
 -spec agent_status(kz_term:text(), kz_term:text()) -> 'ok'.
 agent_status(AccountId, AgentId) when not is_binary(AccountId);
-                                   not is_binary(AgentId) ->
+                                      not is_binary(AgentId) ->
     agent_status(kz_term:to_binary(AccountId), kz_term:to_binary(AgentId));
 agent_status(AccountId, AgentId) ->
     case acdc_agents_sup:find_agent_supervisor(AccountId, AgentId) of
@@ -57,7 +61,7 @@ acct_restart(AccountId) ->
 
 -spec agent_restart(kz_term:text(), kz_term:text()) -> 'ok'.
 agent_restart(AccountId, AgentId) when not is_binary(AccountId);
-                                    not is_binary(AgentId) ->
+                                       not is_binary(AgentId) ->
     agent_restart(kz_term:to_binary(AccountId), kz_term:to_binary(AgentId));
 agent_restart(AccountId, AgentId) ->
     case acdc_agents_sup:find_agent_supervisor(AccountId, AgentId) of
