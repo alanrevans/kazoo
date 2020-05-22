@@ -1,0 +1,1 @@
+{"type":"object","required":["Account-ID","Agent-ID"],"properties":{"Process-ID":{"type":"string"},"Event-Name":{"enum":["sync_req"]},"Event-Category":{"enum":["agent"]},"Agent-ID":{"type":"string"},"Account-ID":{"type":"string"}},"description":"AMQP API for acdc_agent.sync_req","_id":"kapi.acdc_agent.sync_req","$schema":"http://json-schema.org/draft-04/schema#"}

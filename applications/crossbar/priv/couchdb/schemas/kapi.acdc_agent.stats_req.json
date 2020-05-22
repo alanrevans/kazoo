@@ -1,0 +1,1 @@
+{"type":"object","required":["Account-ID"],"properties":{"Event-Name":{"enum":["stats_req"]},"Event-Category":{"enum":["agent"]},"Call-ID":{"type":"string"},"Agent-ID":{"type":"string"},"Account-ID":{"type":"string"}},"description":"AMQP API for acdc_agent.stats_req","_id":"kapi.acdc_agent.stats_req","$schema":"http://json-schema.org/draft-04/schema#"}
