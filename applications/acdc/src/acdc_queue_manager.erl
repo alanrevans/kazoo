@@ -463,7 +463,7 @@ handle_call('current_agents', _, #state{strategy=S
                                                                       ,busy_agents=BusyAgents
                                                                       }
                                        }=State) when S =:= 'rr'
-                                           orelse S =:= 'all'  ->
+                                                     orelse S =:= 'all'  ->
     {'reply', pqueue4:to_list(Q) ++ RingingAgents ++ BusyAgents, State};
 handle_call('current_agents', _, #state{strategy='mi'
                                        ,strategy_state=#strategy_state{agents=L}
@@ -1018,7 +1018,7 @@ filter_winners(CRs, AgentId) ->
 update_strategy_with_agent(#state{strategy=S
                                  ,strategy_state=SS
                                  }, AgentId, Priority, _, Action, Flag) when S =:= 'rr'
-                                     orelse S =:= 'all' ->
+                                                                             orelse S =:= 'all' ->
     update_rr_strategy_with_agent(SS, AgentId, Priority, Action, Flag);
 update_strategy_with_agent(#state{strategy='mi'
                                  ,strategy_state=SS
@@ -1137,7 +1137,7 @@ update_sbrrss_with_agent(AgentId, _Priority, _Skills, 'remove', Flag, SS, Calls)
 remove_agent(S, AgentId, #strategy_state{agents=AgentQueue
                                         ,details=Details
                                         }=SS) when S =:= 'rr'
-                                            orelse S =:= 'all' ->
+                                                   orelse S =:= 'all' ->
     case dict:find(AgentId, Details) of
         {'ok', {Count, _}} when Count > 1 ->
             SS#strategy_state{details=decr_agent(AgentId, Details)};
@@ -1419,10 +1419,10 @@ create_strategy_state(Strategy, AcctDb, QueueId) ->
                            ,kz_term:ne_binary(), kz_term:ne_binary()
                            ) -> strategy_state().
 create_strategy_state(S, #strategy_state{agents='undefined'}=SS, AcctDb, QueueId) when S =:= 'rr'
-    orelse S =:= 'all' ->
+                                                                                       orelse S =:= 'all' ->
     create_strategy_state(S, SS#strategy_state{agents=pqueue4:new()}, AcctDb, QueueId);
 create_strategy_state(S, #strategy_state{agents=AgentQ}=SS, AcctDb, QueueId) when S =:= 'rr'
-    orelse S =:= 'all' ->
+                                                                                  orelse S =:= 'all' ->
     case kz_datamgr:get_results(AcctDb, <<"queues/agents_listing">>, [{'key', QueueId}]) of
         {'ok', []} -> lager:debug("no agents around"), SS;
         {'ok', JObjs} ->
@@ -1484,7 +1484,7 @@ create_strategy_state('sbrr', SS, AcctDb, QueueId) ->
     end.
 
 update_strategy_state(Srv, S, #strategy_state{agents=AgentQueue}) when S =:= 'rr'
-    orelse S =:= 'all' ->
+                                                                       orelse S =:= 'all' ->
     L = pqueue4:to_list(AgentQueue),
     update_strategy_state(Srv, L);
 update_strategy_state(Srv, 'mi', #strategy_state{agents=AgentL}) ->

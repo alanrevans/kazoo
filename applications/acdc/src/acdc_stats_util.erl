@@ -228,14 +228,14 @@ publish_summary_data(RespQ, MsgId, Summary, Active) ->
 
 
 -spec publish_call_query_errors(kz_term:ne_binary()
-                          ,kz_term:ne_binary()
-                          ,kz_term:proplist() | {'error', _}) -> 'ok'.
+                               ,kz_term:ne_binary()
+                               ,kz_term:proplist() | {'error', _}) -> 'ok'.
 publish_call_query_errors(RespQ, MsgId, Errors) ->
     publish_query_errors(RespQ, MsgId, Errors, fun kapi_acdc_stats:publish_current_calls_err/2).
 
 -spec publish_call_summary_query_errors(kz_term:ne_binary()
-                          ,kz_term:ne_binary()
-                          ,kz_term:proplist() | {'error', _}) -> 'ok'.
+                                       ,kz_term:ne_binary()
+                                       ,kz_term:proplist() | {'error', _}) -> 'ok'.
 publish_call_summary_query_errors(RespQ, MsgId, Errors) ->
     publish_query_errors(RespQ, MsgId, Errors, fun kapi_acdc_stats:publish_call_summary_err/2).
 
