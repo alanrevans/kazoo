@@ -80,7 +80,7 @@
 
                ,member_call :: kapps_call:call()
                ,member_call_start :: kz_term:api_non_neg_integer()
-               ,member_call_winners :: [kz_term:api_object()] %% list of who won the call
+               ,member_call_winners :: [kz_term:api_object()] | 'undefined' %% list of who won the call
 
                                        %% Config options
                ,name :: kz_term:ne_binary()
@@ -229,7 +229,6 @@ init([MgrPid, ListenerPid, QueueJObj]) ->
            ,account_id = kz_doc:account_id(QueueJObj)
            ,account_db = kz_doc:account_db(QueueJObj)
            ,queue_id = QueueId
-
            ,name = kz_json:get_value(<<"name">>, QueueJObj)
            ,connection_timeout = connection_timeout(kz_json:get_integer_value(<<"connection_timeout">>, QueueJObj))
            ,agent_ring_timeout = agent_ring_timeout(kz_json:get_integer_value(<<"agent_ring_timeout">>, QueueJObj))
@@ -243,7 +242,6 @@ init([MgrPid, ListenerPid, QueueJObj]) ->
            ,recording_url = kz_json:get_ne_value(<<"call_recording_url">>, QueueJObj)
            ,cdr_url = kz_json:get_ne_value(<<"cdr_url">>, QueueJObj)
            ,member_call = 'undefined'
-
            ,notifications = kz_json:get_value(<<"notifications">>, QueueJObj)
            }
     }.
@@ -700,7 +698,7 @@ connecting('current_call', _, #state{member_call=Call
 %%
 %% @end
 %%------------------------------------------------------------------------------
--spec handle_event(any(), atom(), state()) -> kz_term:handle_fsm_ret(state()).
+-spec handle_event(any(), atom(), state()) -> kz_types:handle_fsm_ret(state()).
 handle_event({'refresh', QueueJObj}, StateName, State) ->
     lager:debug("refreshing queue configs"),
     {'next_state', StateName, update_properties(QueueJObj, State), 'hibernate'};
@@ -717,7 +715,7 @@ handle_event(_Event, StateName, State) ->
 %% @end
 %%------------------------------------------------------------------------------
 -spec handle_sync_event(any(), {pid(),any()}, atom(), state()) ->
-          kz_term:handle_sync_event_ret(state()).
+          kz_types:handle_sync_event_ret(state()).
 handle_sync_event('cdr_url', _, StateName, #state{cdr_url=Url}=State) ->
     {'reply', Url, StateName, State};
 handle_sync_event(_Event, _From, StateName, State) ->
@@ -733,7 +731,7 @@ handle_sync_event(_Event, _From, StateName, State) ->
 %%
 %% @end
 %%------------------------------------------------------------------------------
--spec handle_info(any(), atom(), state()) -> kz_term:handle_fsm_ret(state()).
+-spec handle_info(any(), atom(), state()) -> kz_types:handle_fsm_ret(state()).
 handle_info(_Info, StateName, State) ->
     lager:debug("unhandled message in state ~s: ~p", [StateName, _Info]),
     {'next_state', StateName, State}.

@@ -98,7 +98,7 @@ status(Supervisor) ->
 %% specifications.
 %% @end
 %%------------------------------------------------------------------------------
--spec init(list()) -> kz_term:sup_init_ret().
+-spec init(list()) -> kz_types:sup_init_ret().
 init(Args) ->
     RestartStrategy = 'one_for_all',
     MaxRestarts = 2,

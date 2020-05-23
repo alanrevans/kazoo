@@ -118,7 +118,7 @@ child_of_type(S, T) -> [P || {Ty, P, 'worker', _} <- supervisor:which_children(S
 %% specifications.
 %% @end
 %%------------------------------------------------------------------------------
--spec init(any()) -> kz_term:sup_init_ret().
+-spec init(any()) -> kz_types:sup_init_ret().
 init(Args) ->
     RestartStrategy = 'one_for_all',
     MaxRestarts = 2,

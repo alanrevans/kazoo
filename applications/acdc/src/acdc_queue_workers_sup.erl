@@ -74,7 +74,7 @@ status(Super) ->
 %% specifications.
 %% @end
 %%------------------------------------------------------------------------------
--spec init(any()) -> kz_term:sup_init_ret().
+-spec init(any()) -> kz_types:sup_init_ret().
 init([]) ->
     RestartStrategy = 'simple_one_for_one',
     MaxRestarts = 1,

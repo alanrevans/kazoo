@@ -783,7 +783,7 @@ handle_cast({'member_connect_accepted'}, #state{msg_queue_id=AmqpQueue
     maybe_start_recording(Call, ShouldRecord, RecordingUrl),
 
     send_member_connect_accepted(AmqpQueue, call_id(Call), AccountId, AgentId, MyId),
-    [send_agent_busy(AccountId, AgentId, QueueId, Call) || QueueId <- Qs],
+    _ = [send_agent_busy(AccountId, AgentId, QueueId, Call) || QueueId <- Qs],
     {'noreply', State};
 
 handle_cast({'member_connect_accepted', ACallId}, #state{msg_queue_id=AmqpQueue
@@ -804,7 +804,7 @@ handle_cast({'member_connect_accepted', ACallId}, #state{msg_queue_id=AmqpQueue
     lager:debug("new agent call ids: ~p", [ACallIds1]),
 
     send_member_connect_accepted(AmqpQueue, call_id(Call), AccountId, AgentId, MyId),
-    [send_agent_busy(AccountId, AgentId, QueueId, Call) || QueueId <- Qs],
+    _ = [send_agent_busy(AccountId, AgentId, QueueId, Call) || QueueId <- Qs],
     {'noreply', State#state{agent_call_ids=ACallIds1}, 'hibernate'};
 
 handle_cast({'member_connect_accepted', ACallId, NewCall}, #state{msg_queue_id=AmqpQueue
@@ -825,7 +825,7 @@ handle_cast({'member_connect_accepted', ACallId, NewCall}, #state{msg_queue_id=A
     lager:debug("new agent call ids: ~p", [ACallIds1]),
 
     send_member_connect_accepted(AmqpQueue, call_id(Call), call_id(NewCall), AccountId, AgentId, MyId),
-    [send_agent_busy(AccountId, AgentId, QueueId, Call) || QueueId <- Qs],
+    _ = [send_agent_busy(AccountId, AgentId, QueueId, Call) || QueueId <- Qs],
     {'noreply', State#state{call=NewCall
                            ,original_call=Call
                            ,agent_call_ids=ACallIds1
@@ -916,7 +916,7 @@ handle_cast({'outbound_call', CallId, Number, Name}, #state{agent_id=AgentId
     _ = kz_log:put_callid(CallId),
     acdc_util:bind_to_call_events(CallId),
     Call = kapps_call:set_call_id(CallId, kapps_call:new()),
-    [send_agent_busy(AccountId, AgentId, QueueId, Call, 'outbound', Number, Name) || QueueId <- Qs],
+    _ = [send_agent_busy(AccountId, AgentId, QueueId, Call, 'outbound', Number, Name) || QueueId <- Qs],
 
     lager:debug("bound to agent's outbound call ~s", [CallId]),
     {'noreply', State#state{call=Call}, 'hibernate'};
@@ -928,7 +928,7 @@ handle_cast({'inbound_call', CallId, Number, Name}, #state{agent_id=AgentId
     _ = kz_log:put_callid(CallId),
     acdc_util:bind_to_call_events(CallId),
     Call = kapps_call:set_call_id(CallId, kapps_call:new()),
-    [send_agent_busy(AccountId, AgentId, QueueId, Call, 'inbound', Number, Name) || QueueId <- Qs],
+    _ = [send_agent_busy(AccountId, AgentId, QueueId, Call, 'inbound', Number, Name) || QueueId <- Qs],
 
     lager:debug("bound to agent's outbound call ~s", [CallId]),
     {'noreply', State#state{call=Call}, 'hibernate'};

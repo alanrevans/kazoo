@@ -1971,7 +1971,7 @@ inbound('current_call', _, State) ->
 %%
 %% @end
 %%------------------------------------------------------------------------------
--spec handle_event(any(), atom(), state()) -> kz_term:handle_fsm_ret(state()).
+-spec handle_event(any(), atom(), state()) -> kz_types:handle_fsm_ret(state()).
 handle_event({'agent_logout'}=Event, StateName, #state{agent_state_updates=Queue}=State) ->
     case valid_state_for_logout(StateName) of
         'true' -> handle_agent_logout(State);
@@ -2075,7 +2075,7 @@ handle_event(_Event, StateName, State) ->
 %%
 %% @end
 %%------------------------------------------------------------------------------
--spec handle_sync_event(any(), {pid(),any()}, atom(), state()) -> kz_term:handle_sync_event_ret(state()).
+-spec handle_sync_event(any(), {pid(),any()}, atom(), state()) -> kz_types:handle_sync_event_ret(state()).
 handle_sync_event(_Event, _From, StateName, State) ->
     lager:debug("unhandled sync event in state ~s: ~p", [StateName, _Event]),
     {'reply', 'ok', StateName, State}.
@@ -2088,7 +2088,7 @@ handle_sync_event(_Event, _From, StateName, State) ->
 %%
 %% @end
 %%------------------------------------------------------------------------------
--spec handle_info(any(), atom(), state()) -> kz_term:handle_fsm_ret(state()).
+-spec handle_info(any(), atom(), state()) -> kz_types:handle_fsm_ret(state()).
 handle_info({'timeout', _Ref, ?SYNC_RESPONSE_MESSAGE}=Msg, StateName, State) ->
     gen_fsm:send_event(self(), Msg),
     {'next_state', StateName, State};

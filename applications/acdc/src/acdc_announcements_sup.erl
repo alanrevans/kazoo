@@ -74,7 +74,7 @@ stop_announcements(Pid) ->
 %%
 %% @end
 %%------------------------------------------------------------------------------
--spec init(list()) -> kz_term:sup_init_ret().
+-spec init(list()) -> kz_types:sup_init_ret().
 init([]) ->
 
     SupFlags = #{strategy => simple_one_for_one,

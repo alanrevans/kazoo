@@ -53,7 +53,7 @@ start_link() ->
 %% @doc
 %% @end
 %%------------------------------------------------------------------------------
--spec init(any()) -> kz_term:sup_init_ret().
+-spec init(any()) -> kz_types:sup_init_ret().
 init([]) ->
     kz_util:set_startup(),
     RestartStrategy = 'one_for_one',

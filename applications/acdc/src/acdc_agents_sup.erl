@@ -97,7 +97,7 @@ restart_agent(AccountId, AgentId) ->
             lager:info("no supervisor for agent ~s(~s) to restart", [AgentId, AccountId]),
             new(AccountId, AgentId);
         S ->
-            acdc_agent_sup:stop(S),
+            _ = acdc_agent_sup:stop(S),
             new(AccountId, AgentId)
     end.
 
@@ -146,7 +146,7 @@ find_agent_supervisor(AccountId, AgentId, [Super|Rest]) ->
 %% specifications.
 %% @end
 %%------------------------------------------------------------------------------
--spec init(any()) -> kz_term:sup_init_ret().
+-spec init(any()) -> kz_types:sup_init_ret().
 init([]) ->
     RestartStrategy = 'simple_one_for_one',
     MaxRestarts = 1,
