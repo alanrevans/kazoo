@@ -327,7 +327,7 @@ connect_req({'member_call_cancel', JObj}, #state{queue_proc=Srv
             webseq:evt(?WSD_ID, self(), CallId, <<"member call finish - DTMF">>),
 
             acdc_queue_listener:exit_member_call(Srv),
-            acdc_stats:call_abandoned(AccountId, QueueId, CallId, ?ABANDON_EXIT),
+            _ = acdc_stats:call_abandoned(AccountId, QueueId, CallId, ?ABANDON_EXIT),
             {'next_state', 'ready', clear_member_call(State), 'hibernate'};
         'false' -> {'next_state', 'connect_req', State}
     end;
@@ -392,7 +392,7 @@ connect_req({'member_hungup', JObj}, #state{queue_proc=Srv
             webseq:evt(?WSD_ID, self(), CallId, <<"member call finish - abandon">>),
 
             acdc_queue_listener:cancel_member_call(Srv, JObj),
-            acdc_stats:call_abandoned(AccountId, QueueId, CallId, ?ABANDON_HANGUP),
+            _ = acdc_stats:call_abandoned(AccountId, QueueId, CallId, ?ABANDON_HANGUP),
             {'next_state', 'ready', clear_member_call(State), 'hibernate'};
         'false' ->
             lager:debug("hangup recv for ~s while processing ~s, ignoring", [kz_json:get_value(<<"Call-ID">>, JObj)
@@ -412,7 +412,7 @@ connect_req({'timeout', ConnRef, ?CONNECTION_TIMEOUT_MESSAGE}, #state{queue_proc
     webseq:evt(?WSD_ID, self(), CallId, <<"member call finish - timeout">>),
 
     acdc_queue_listener:timeout_member_call(Srv),
-    acdc_stats:call_abandoned(AccountId, QueueId, CallId, ?ABANDON_TIMEOUT),
+    _ = acdc_stats:call_abandoned(AccountId, QueueId, CallId, ?ABANDON_TIMEOUT),
     {'next_state', 'ready', clear_member_call(State), 'hibernate'};
 
 connect_req({'register_callback', JObj}, #state{connection_timer_ref=ConnRef}=State) ->
@@ -480,7 +480,7 @@ connecting({'member_call_cancel', JObj}, #state{queue_proc=Srv
                           end,
                           Winners),
             acdc_queue_listener:exit_member_call(Srv),
-            acdc_stats:call_abandoned(AccountId, QueueId, CallId, ?ABANDON_EXIT),
+            _ = acdc_stats:call_abandoned(AccountId, QueueId, CallId, ?ABANDON_EXIT),
             {'next_state', 'ready', clear_member_call(State), 'hibernate'};
         'false' -> {'next_state', 'connecting', State}
     end;
@@ -506,7 +506,7 @@ connecting({'accepted', AcceptJObj}, #state{queue_proc=Srv
             %%            lists:foreach(fun(Win) -> acdc_queue_listener:member_connect_satisfied(Srv, Win, []) end, Wins),
 
             acdc_queue_listener:finish_member_call(Srv, AcceptJObj),
-            case kz_json:get_value(<<"Old-Call-ID">>, AcceptJObj) of
+            _ = case kz_json:get_value(<<"Old-Call-ID">>, AcceptJObj) of
                 'undefined' ->
                     acdc_stats:call_handled(AccountId, QueueId, CallId
                                            ,kz_json:get_value(<<"Agent-ID">>, AcceptJObj)
@@ -612,7 +612,7 @@ connecting({'member_hungup', CallEvt}, #state{queue_proc=Srv
     lager:debug("caller hungup while we waited for the agent to connect"),
     acdc_queue_listener:cancel_member_call(Srv, CallEvt),
     CallId = kapps_call:call_id(Call),
-    acdc_stats:call_abandoned(AccountId, QueueId, CallId, ?ABANDON_HANGUP),
+    _ = acdc_stats:call_abandoned(AccountId, QueueId, CallId, ?ABANDON_HANGUP),
 
     webseq:evt(?WSD_ID, self(), CallId, <<"member call - hungup">>),
 
@@ -634,7 +634,7 @@ connecting({'timeout', ConnRef, ?CONNECTION_TIMEOUT_MESSAGE}, #state{queue_proc=
                   Winners),
 
     CallId = kapps_call:call_id(Call),
-    acdc_stats:call_abandoned(AccountId, QueueId, CallId, ?ABANDON_TIMEOUT),
+    _ = acdc_stats:call_abandoned(AccountId, QueueId, CallId, ?ABANDON_TIMEOUT),
     webseq:evt(?WSD_ID, self(), CallId, <<"member call finish - timeout">>),
     {'next_state', 'ready', clear_member_call(State), 'hibernate'};
 
@@ -917,7 +917,7 @@ maybe_connect_re_req(MgrSrv, ListenerSrv, #state{account_id=AccountId
             lager:debug("all agents have left the queue, failing call"),
             webseq:note(?WSD_ID, self(), 'right', <<"all agents have left the queue, failing call">>),
             acdc_queue_listener:exit_member_call_empty(ListenerSrv),
-            acdc_stats:call_abandoned(AccountId, QueueId, kapps_call:call_id(Call), ?ABANDON_EMPTY),
+            _ = acdc_stats:call_abandoned(AccountId, QueueId, kapps_call:call_id(Call), ?ABANDON_EMPTY),
             {'next_state', 'ready', clear_member_call(State), 'hibernate'}
     end;
 maybe_connect_re_req(MgrSrv, ListenerSrv, State) ->

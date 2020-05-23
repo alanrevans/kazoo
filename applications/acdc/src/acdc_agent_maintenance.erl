@@ -55,7 +55,7 @@ acct_restart(AccountId) ->
             lager:debug("terminating existing agent processes in ~s", [AccountId]),
             _ = [exit(Sup, 'kill') || Sup <- As],
             lager:info("restarting agents in ~s", [AccountId]),
-            acdc_init:init_acct_agents(AccountId),
+            _ = acdc_init:init_acct_agents(AccountId),
             'ok'
     end.
 

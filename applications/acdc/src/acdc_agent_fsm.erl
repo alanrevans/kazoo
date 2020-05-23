@@ -836,7 +836,7 @@ ringing({'member_connect_satisfied', JObj, Node}, #state{agent_listener=AgentLis
         true ->
             lager:info("agent ~p hanging up: agent ~p is handling the call", [AgentId, AcceptedAgentId]),
             acdc_agent_listener:channel_hungup(AgentListener, MemberCallId),
-            acdc_stats:call_missed(AccountId, QueueId, AgentId, MemberCallId, <<"LOSE_RACE">>),
+            _ = acdc_stats:call_missed(AccountId, QueueId, AgentId, MemberCallId, <<"LOSE_RACE">>),
             acdc_agent_listener:presence_update(AgentListener, ?PRESENCE_GREEN),
 
             State1 = clear_call(State, 'failed'),
@@ -887,7 +887,7 @@ ringing({'originate_failed', E}, #state{agent_listener=AgentListener
 
     acdc_agent_listener:member_connect_retry(AgentListener, CallId),
 
-    acdc_stats:call_missed(AccountId, QueueId, AgentId, CallId, ErrReason),
+    _ = acdc_stats:call_missed(AccountId, QueueId, AgentId, CallId, ErrReason),
 
     acdc_agent_listener:presence_update(AgentListener, ?PRESENCE_GREEN),
 
@@ -907,7 +907,7 @@ ringing({'agent_timeout', _JObj}, #state{agent_listener=AgentListener
 
     acdc_agent_listener:agent_timeout(AgentListener),
 
-    acdc_stats:call_missed(AccountId, QueueId, AgentId, CallId, ErrReason),
+    _ = acdc_stats:call_missed(AccountId, QueueId, AgentId, CallId, ErrReason),
 
     acdc_agent_listener:presence_update(AgentListener, ?PRESENCE_GREEN),
 
@@ -958,7 +958,7 @@ ringing(?DESTROYED_CHANNEL(MemberCallId, _Cause), #state{agent_listener=AgentLis
     lager:debug("caller's channel (~s) has gone down, stop agent's call: ~s", [MemberCallId, _Cause]),
     acdc_agent_listener:channel_hungup(AgentListener, MemberCallId),
 
-    acdc_stats:call_abandoned(AccountId, QueueId, MemberCallId, ?ABANDON_HANGUP),
+    _ = acdc_stats:call_abandoned(AccountId, QueueId, MemberCallId, ?ABANDON_HANGUP),
 
     acdc_agent_listener:presence_update(AgentListener, ?PRESENCE_GREEN),
     apply_state_updates(clear_call(State, 'ready'));
@@ -1133,7 +1133,7 @@ ringing_callback({'originate_failed', JObj}, #state{agent_listener=AgentListener
 
     acdc_agent_listener:member_connect_retry(AgentListener, CallId),
 
-    acdc_stats:call_missed(AccountId, QueueId, AgentId, CallId, ErrReason),
+    _ = acdc_stats:call_missed(AccountId, QueueId, AgentId, CallId, ErrReason),
 
     acdc_agent_listener:presence_update(AgentListener, ?PRESENCE_GREEN),
 
@@ -1181,7 +1181,7 @@ ringing_callback({'member_connect_satisfied', JObj, Node}, #state{agent_listener
         true ->
             lager:info("agent ~p hanging up: agent ~p is handling the call", [AgentId, AcceptedAgentId]),
             acdc_agent_listener:channel_hungup(AgentListener, MemberCallId),
-            acdc_stats:call_missed(AccountId, QueueId, AgentId, MemberCallId, <<"LOSE_RACE">>),
+            _ = acdc_stats:call_missed(AccountId, QueueId, AgentId, MemberCallId, <<"LOSE_RACE">>),
             acdc_agent_listener:presence_update(AgentListener, ?PRESENCE_GREEN),
 
             State1 = clear_call(State, 'failed'),
@@ -1223,7 +1223,7 @@ ringing_callback(?DESTROYED_CHANNEL(ACallId, Cause), #state{account_id=AccountId
 
     acdc_agent_listener:member_connect_retry(AgentListener, CallId),
 
-    acdc_stats:call_missed(AccountId, QueueId, AgentId, CallId, Cause),
+    _ = acdc_stats:call_missed(AccountId, QueueId, AgentId, CallId, Cause),
 
     acdc_agent_listener:presence_update(AgentListener, ?PRESENCE_GREEN),
 
@@ -1306,7 +1306,7 @@ awaiting_callback({'originate_failed', JObj}, #state{account_id=AccountId
 
     acdc_agent_listener:member_connect_accepted(AgentListener, ACallId, MemberCall),
 
-    acdc_stats:call_handled(AccountId, QueueId, OriginalMemberCallId, AgentId),
+    _ = acdc_stats:call_handled(AccountId, QueueId, OriginalMemberCallId, AgentId),
 
     acdc_agent_listener:presence_update(AgentListener, ?PRESENCE_GREEN),
 
@@ -1370,7 +1370,7 @@ awaiting_callback({'channel_answered', JObj}=Evt, #state{account_id=AccountId
             {CIDNumber, CIDName} = acdc_util:caller_id(OriginalMemberCall),
 
             acdc_agent_stats:agent_connected(AccountId, AgentId, OriginalMemberCallId, CIDName, CIDNumber),
-            acdc_stats:call_handled(AccountId, QueueId, OriginalMemberCallId, AgentId),
+            _ = acdc_stats:call_handled(AccountId, QueueId, OriginalMemberCallId, AgentId),
 
             {'next_state', 'awaiting_callback', State#state{member_call=MemberCall
                                                            ,member_call_id=CallId
@@ -1401,7 +1401,7 @@ awaiting_callback(?DESTROYED_CHANNEL(ACallId, _Cause), #state{account_id=Account
 
     acdc_agent_listener:member_connect_accepted(AgentListener, ACallId, MemberCall),
 
-    acdc_stats:call_handled(AccountId, QueueId, OriginalMemberCallId, AgentId),
+    _ = acdc_stats:call_handled(AccountId, QueueId, OriginalMemberCallId, AgentId),
 
     acdc_agent_listener:presence_update(AgentListener, ?PRESENCE_GREEN),
 
@@ -1461,7 +1461,7 @@ maybe_member_no_answer(CallId, Cause, #state{account_id=AccountId
                                             ,member_call_queue_id=QueueId
                                             ,agent_call_id=ACallId
                                             }=State) ->
-    case props:get_value(CallId, Candidates) of
+    _ = case props:get_value(CallId, Candidates) of
         'undefined' -> 'ok';
         _ ->
             ErrReason = missed_reason(Cause),
@@ -1502,7 +1502,7 @@ answered({'dialplan_error', _App}, #state{agent_listener=AgentListener
     acdc_agent_listener:channel_hungup(AgentListener, ACallId),
     acdc_agent_listener:member_connect_retry(AgentListener, CallId),
 
-    acdc_stats:call_missed(AccountId, QueueId, AgentId, original_call_id(State), <<"dialplan_error">>),
+    _ = acdc_stats:call_missed(AccountId, QueueId, AgentId, original_call_id(State), <<"dialplan_error">>),
 
     acdc_agent_listener:presence_update(AgentListener, ?PRESENCE_GREEN),
     apply_state_updates(clear_call(State, 'ready'));
@@ -1522,7 +1522,7 @@ answered(?DESTROYED_CHANNEL(CallId, _Cause), #state{account_id=AccountId
                                                    ,outbound_call_ids=[OutboundCallId|_]
                                                    }=State) ->
     lager:debug("caller's channel hung up, but there are still some outbounds"),
-    acdc_stats:call_processed(AccountId, QueueId, AgentId, original_call_id(State), 'member'),
+    _ = acdc_stats:call_processed(AccountId, QueueId, AgentId, original_call_id(State), 'member'),
     acdc_agent_listener:channel_hungup(AgentListener, CallId),
     maybe_notify(Ns, ?NOTIFY_HANGUP, State),
     {'next_state', 'outbound', start_outbound_call_handling(OutboundCallId, clear_call(State, 'ready')), 'hibernate'};
@@ -1541,7 +1541,7 @@ answered(?DESTROYED_CHANNEL(CallId, _Cause), #state{account_id=AccountId
                                                    ,outbound_call_ids=[OutboundCallId|_]
                                                    }=State) ->
     lager:debug("agent's channel hung up, but there are still some outbounds"),
-    acdc_stats:call_processed(AccountId, QueueId, AgentId, original_call_id(State), 'agent'),
+    _ = acdc_stats:call_processed(AccountId, QueueId, AgentId, original_call_id(State), 'agent'),
     acdc_agent_listener:channel_hungup(AgentListener, MemberCallId),
     maybe_notify(Ns, ?NOTIFY_HANGUP, State),
     {'next_state', 'outbound', start_outbound_call_handling(OutboundCallId, clear_call(State, 'ready')), 'hibernate'};
@@ -1602,7 +1602,7 @@ answered({'channel_transferee', Transferor, Transferee}, #state{account_id=Accou
                                                                ,agent_call_id=Transferee
                                                                }=State) ->
     lager:info("caller transferred the agent"),
-    acdc_stats:call_processed(AccountId, QueueId, AgentId, Transferor, 'member'),
+    _ = acdc_stats:call_processed(AccountId, QueueId, AgentId, Transferor, 'member'),
     maybe_notify(Ns, ?NOTIFY_HANGUP, State),
     {'next_state', 'outbound', start_outbound_call_handling(Transferee, clear_call(State, 'ready'))};
 answered({'channel_transferee', _, _}, State) ->
@@ -1998,7 +1998,7 @@ handle_event({'pause', Timeout, Alias}, 'ringing', #state{agent_listener=AgentLi
     %% Give up the current ringing call
     acdc_agent_listener:hangup_call(AgentListener),
     lager:debug("stopping ringing agent in order to move to pause"),
-    acdc_stats:call_missed(AccountId, QueueId, AgentId, original_call_id(State), <<"agent pausing">>),
+    _ = acdc_stats:call_missed(AccountId, QueueId, AgentId, original_call_id(State), <<"agent pausing">>),
     NewFSMState = clear_call(State, 'failed'),
     %% After clearing we are basically 'ready' state, pause from that state
     handle_event({'pause', Timeout, Alias}, 'ready', NewFSMState);
@@ -2313,7 +2313,7 @@ hangup_call(#state{agent_listener=AgentListener
                   ,agent_id=AgentId
                   ,queue_notifications=Ns
                   }=State, Initiator) ->
-    acdc_stats:call_processed(AccountId, QueueId, AgentId, original_call_id(State), Initiator),
+    _ = acdc_stats:call_processed(AccountId, QueueId, AgentId, original_call_id(State), Initiator),
 
     acdc_agent_listener:channel_hungup(AgentListener, CallId),
     maybe_notify(Ns, ?NOTIFY_HANGUP, State),

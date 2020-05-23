@@ -508,7 +508,7 @@ handle_cast({'member_call_cancel', K, JObj}, #state{ignored_member_calls=Dict}=S
     CallId = kz_json:get_value(<<"Call-ID">>, JObj),
     Reason = kz_json:get_value(<<"Reason">>, JObj),
 
-    acdc_stats:call_abandoned(AccountId, QueueId, CallId, Reason),
+    _ = acdc_stats:call_abandoned(AccountId, QueueId, CallId, Reason),
     case Reason of
         %% Don't add to ignored_member_calls because an FSM has already dealt with this call
         <<"No agents left in queue">> ->
@@ -685,7 +685,7 @@ handle_cast({'add_queue_member', JObj}, #state{account_id=AccountId
                          lager:warning("skills ~p required, but queue ~s is not set to skills_based_round_robin", [Skills, QueueId]),
                          'undefined'
                  end,
-    acdc_stats:call_waiting(AccountId, QueueId, Position
+    _ = acdc_stats:call_waiting(AccountId, QueueId, Position
                            ,kapps_call:call_id(Call1)
                            ,CIDName
                            ,CIDNumber
@@ -975,7 +975,7 @@ start_agent_and_worker(WorkersSup, AccountId, QueueId, AgentJObj) ->
 
 %% Really sophisticated selection algorithm
 -spec pick_winner_(kz_json:objects(), queue_strategy(), kz_term:api_binary()) ->
-          {kz_json:objects(), kz_json:objects()}.
+          'undefined' | {kz_json:objects(), kz_json:objects()}.
 pick_winner_(_, S, 'undefined') ->
     lager:error("no next_agent (~p) available; try again", [S]),
     'undefined';
@@ -1571,7 +1571,7 @@ cancel_position_announcements(Call, Pids) ->
         Pid ->
             lager:debug("cancelling announcements for ~s", [CallId]),
             Pids1 = maps:remove(CallId, Pids),
-            acdc_announcements_sup:stop_announcements(Pid),
+            _ = acdc_announcements_sup:stop_announcements(Pid),
 
             %% Attempt to skip remaining announcement media, but don't flush hangups
             NoopId = kz_datamgr:get_uuid(),
@@ -1630,7 +1630,7 @@ maybe_add_queue_member_as_callback(JObj, Call, #state{account_id=AccountId
 callback_flag(AccountId, QueueId, Call) ->
     Call1 = prepend_cid_name(<<"CB:">>, Call),
     {_, CIDName} = acdc_util:caller_id(Call1),
-    acdc_stats:call_marked_callback(AccountId
+    _ = acdc_stats:call_marked_callback(AccountId
                                    ,QueueId
                                    ,kapps_call:call_id(Call)
                                    ,CIDName
